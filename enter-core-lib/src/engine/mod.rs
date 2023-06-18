@@ -1,8 +1,13 @@
 pub mod gfx;
 pub mod scripting;
 
-use self::gfx::{GfxContext, GfxContextCreationError};
-use std::{sync::Arc, thread::sleep, time::Duration};
+use self::gfx::{GfxContext, GfxContextCreationError, ScreenManager};
+use std::{
+    cell::{Ref, RefCell, RefMut},
+    sync::Arc,
+    thread::sleep,
+    time::Duration,
+};
 use thiserror::Error;
 use winit::{
     dpi::LogicalSize,
@@ -14,6 +19,34 @@ use winit::{
 pub struct Context {
     window: Window,
     gfx_ctx: GfxContext,
+    screen_mgr: RefCell<ScreenManager>,
+}
+
+impl Context {
+    pub fn new(
+        window: Window,
+        gfx_context: GfxContext,
+        screen_width: u32,
+        screen_height: u32,
+    ) -> Self {
+        Self {
+            window,
+            gfx_ctx: gfx_context,
+            screen_mgr: RefCell::new(ScreenManager::new(screen_width, screen_height)),
+        }
+    }
+
+    pub fn window(&self) -> &Window {
+        &self.window
+    }
+
+    pub fn screen_mgr(&self) -> Ref<ScreenManager> {
+        self.screen_mgr.borrow()
+    }
+
+    pub fn screen_mgr_mut(&self) -> RefMut<ScreenManager> {
+        self.screen_mgr.borrow_mut()
+    }
 }
 
 pub struct Engine {
@@ -32,11 +65,19 @@ impl Engine {
             .build(&event_loop)
             .unwrap();
         let gfx_ctx = GfxContext::new(&window).await?;
+        let ctx = Arc::new(Context::new(window, gfx_ctx, config.width, config.height));
 
-        Ok(Self {
-            event_loop,
-            ctx: Arc::new(Context { window, gfx_ctx }),
-        })
+        {
+            let scale_factor = ctx.window.scale_factor();
+            let mut screen_mgr = ctx.screen_mgr_mut();
+            screen_mgr.update_scale_factor(
+                scale_factor,
+                LogicalSize::new(config.width, config.height).to_physical(scale_factor),
+            );
+            // TODO: Apply scale factor to the rendering context.
+        }
+
+        Ok(Self { event_loop, ctx })
     }
 
     pub fn run(self) -> ! {
@@ -111,6 +152,7 @@ impl Engine {
                     window_id: id,
                 } if id == window_id => {
                     // TODO: Handle window resized event here.
+                    self.ctx.screen_mgr_mut().update_size(inner_size);
 
                     return;
                 }
@@ -123,6 +165,9 @@ impl Engine {
                     window_id: id,
                 } if id == window_id => {
                     // TODO: Handle scale factor changed event here.
+                    self.ctx
+                        .screen_mgr_mut()
+                        .update_scale_factor(scale_factor, *new_inner_size);
 
                     return;
                 }
