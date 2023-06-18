@@ -1,6 +1,7 @@
-mod gfx;
+pub mod gfx;
+pub mod scripting;
 
-use gfx::*;
+use self::gfx::{GfxContext, GfxContextCreationError};
 use std::{sync::Arc, thread::sleep, time::Duration};
 use thiserror::Error;
 use winit::{

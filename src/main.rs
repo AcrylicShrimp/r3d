@@ -1,4 +1,4 @@
-use engine::{Engine, EngineConfig, EngineExecError, EngineInitError};
+use enter_core_lib::engine::{Engine, EngineConfig, EngineExecError, EngineInitError};
 use pollster::FutureExt;
 use thiserror::Error;
 
