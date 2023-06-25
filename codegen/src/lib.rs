@@ -1,3 +1,4 @@
+mod handle;
 mod lua;
 
 use proc_macro::TokenStream;
@@ -57,4 +58,10 @@ pub fn ops_to_string(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn ops_extra(_attr: TokenStream, item: TokenStream) -> TokenStream {
     item
+}
+
+#[proc_macro_derive(Handle)]
+#[proc_macro_error]
+pub fn handle(item: TokenStream) -> TokenStream {
+    handle::handle(item)
 }

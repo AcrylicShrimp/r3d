@@ -1,5 +1,5 @@
+use codegen::Handle;
 use itertools::Itertools;
-use std::{ops::Deref, sync::Arc};
 use thiserror::Error;
 use wgpu::{
     Adapter, Backend, Backends, CompositeAlphaMode, CreateSurfaceError, Device, DeviceDescriptor,
@@ -32,6 +32,7 @@ pub enum GfxContextCreationError {
     RequestDeviceError(#[from] RequestDeviceError),
 }
 
+#[derive(Handle)]
 pub struct GfxContext {
     pub instance: Instance,
     pub device: Device,
@@ -41,7 +42,7 @@ pub struct GfxContext {
 }
 
 impl GfxContext {
-    pub(crate) async fn new(window: &Window) -> Result<Self, GfxContextCreationError> {
+    pub async fn new(window: &Window) -> Result<Self, GfxContextCreationError> {
         let instance = Instance::new(InstanceDescriptor::default());
         let surface = unsafe { instance.create_surface(window) }?;
         let adapters = instance
@@ -128,28 +129,3 @@ fn select_adapter(surface: &Surface, adapters: impl AsRef<[Adapter]>) -> Option<
 
     scores.iter().position_max()
 }
-
-#[derive(Clone)]
-pub struct GfxContextHandle(Arc<GfxContext>);
-
-impl GfxContextHandle {
-    pub fn new(gfx_ctx: GfxContext) -> Self {
-        Self(Arc::new(gfx_ctx))
-    }
-}
-
-impl Deref for GfxContextHandle {
-    type Target = GfxContext;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl PartialEq for GfxContextHandle {
-    fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0)
-    }
-}
-
-impl Eq for GfxContextHandle {}
