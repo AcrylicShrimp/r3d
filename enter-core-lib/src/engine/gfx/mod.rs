@@ -1,14 +1,5 @@
-mod color;
-mod screen_mgr;
-mod sprite_texel_mapping;
-mod texture;
-
-pub use color::*;
-pub use screen_mgr::*;
-pub use sprite_texel_mapping::*;
-pub use texture::*;
-
 use itertools::Itertools;
+use std::{ops::Deref, sync::Arc};
 use thiserror::Error;
 use wgpu::{
     Adapter, Backend, Backends, CompositeAlphaMode, CreateSurfaceError, Device, DeviceDescriptor,
@@ -16,6 +7,20 @@ use wgpu::{
     Surface, SurfaceConfiguration, TextureFormat, TextureUsages,
 };
 use winit::window::Window;
+
+mod color;
+mod material;
+mod render_mgr;
+mod screen_mgr;
+mod sprite_texel_mapping;
+mod texture;
+
+pub use color::*;
+pub use material::*;
+pub use render_mgr::*;
+pub use screen_mgr::*;
+pub use sprite_texel_mapping::*;
+pub use texture::*;
 
 #[derive(Error, Debug)]
 pub enum GfxContextCreationError {
@@ -123,3 +128,28 @@ fn select_adapter(surface: &Surface, adapters: impl AsRef<[Adapter]>) -> Option<
 
     scores.iter().position_max()
 }
+
+#[derive(Clone)]
+pub struct GfxContextHandle(Arc<GfxContext>);
+
+impl GfxContextHandle {
+    pub fn new(gfx_ctx: GfxContext) -> Self {
+        Self(Arc::new(gfx_ctx))
+    }
+}
+
+impl Deref for GfxContextHandle {
+    type Target = GfxContext;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl PartialEq for GfxContextHandle {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Eq for GfxContextHandle {}

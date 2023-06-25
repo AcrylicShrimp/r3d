@@ -1,7 +1,9 @@
 pub mod gfx;
 pub mod scripting;
 
-use self::gfx::{GfxContext, GfxContextCreationError, ScreenManager};
+use self::gfx::{
+    GfxContext, GfxContextCreationError, GfxContextHandle, ScreenManager, ShaderLayoutManager,
+};
 use std::{
     cell::{Ref, RefCell, RefMut},
     sync::Arc,
@@ -18,26 +20,31 @@ use winit::{
 
 pub struct Context {
     window: Window,
-    gfx_ctx: GfxContext,
+    gfx_ctx: GfxContextHandle,
     screen_mgr: RefCell<ScreenManager>,
+    shader_layout_mgr: ShaderLayoutManager,
 }
 
 impl Context {
-    pub fn new(
-        window: Window,
-        gfx_context: GfxContext,
-        screen_width: u32,
-        screen_height: u32,
-    ) -> Self {
+    pub fn new(window: Window, gfx_ctx: GfxContext, screen_width: u32, screen_height: u32) -> Self {
+        let gfx_ctx = GfxContextHandle::new(gfx_ctx);
+        let screen_mgr = ScreenManager::new(screen_width, screen_height).into();
+        let shader_layout_mgr = ShaderLayoutManager::new(gfx_ctx.clone());
+
         Self {
             window,
-            gfx_ctx: gfx_context,
-            screen_mgr: RefCell::new(ScreenManager::new(screen_width, screen_height)),
+            gfx_ctx,
+            screen_mgr,
+            shader_layout_mgr,
         }
     }
 
     pub fn window(&self) -> &Window {
         &self.window
+    }
+
+    pub fn gfx_ctx(&self) -> &GfxContextHandle {
+        &self.gfx_ctx
     }
 
     pub fn screen_mgr(&self) -> Ref<ScreenManager> {
@@ -46,6 +53,10 @@ impl Context {
 
     pub fn screen_mgr_mut(&self) -> RefMut<ScreenManager> {
         self.screen_mgr.borrow_mut()
+    }
+
+    pub fn shader_layout_mgr(&self) -> &ShaderLayoutManager {
+        &self.shader_layout_mgr
     }
 }
 

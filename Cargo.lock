@@ -381,6 +381,7 @@ dependencies = [
  "colored",
  "itertools",
  "mlua",
+ "naga",
  "parking_lot",
  "serde",
  "serde_json",
