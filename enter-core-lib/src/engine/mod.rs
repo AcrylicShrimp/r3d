@@ -91,22 +91,39 @@ impl Engine {
         Ok(Self { event_loop, ctx })
     }
 
-    pub fn run(self) -> ! {
+    pub fn run(self, loop_mode: EngineLoopMode) -> ! {
         self.ctx.window.set_visible(true);
 
         let window_id = self.ctx.window.id();
         let mut window_occluded = false;
 
         self.event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::Poll;
+            *control_flow = match loop_mode {
+                EngineLoopMode::Wait => ControlFlow::Wait,
+                EngineLoopMode::Poll => ControlFlow::Poll,
+            };
 
             match event {
                 Event::MainEventsCleared => {
-                    // TODO: Render game here.
+                    if loop_mode == EngineLoopMode::Wait {
+                        return;
+                    }
 
                     if window_occluded {
                         sleep(Duration::from_millis(60));
+                        return;
                     }
+
+                    // TODO: Render here.
+
+                    return;
+                }
+                Event::RedrawRequested(id) if id == window_id => {
+                    if loop_mode == EngineLoopMode::Poll {
+                        return;
+                    }
+
+                    // TODO: Render here.
 
                     return;
                 }
@@ -162,6 +179,13 @@ impl Engine {
                     event: WindowEvent::Resized(inner_size),
                     window_id: id,
                 } if id == window_id => {
+                    if inner_size.width == 0 || inner_size.height == 0 {
+                        window_occluded = true;
+                        return;
+                    } else {
+                        window_occluded = false;
+                    }
+
                     self.ctx.screen_mgr_mut().update_size(inner_size);
                     self.ctx.gfx_ctx().resize(inner_size);
 
@@ -175,6 +199,13 @@ impl Engine {
                         },
                     window_id: id,
                 } if id == window_id => {
+                    if new_inner_size.width == 0 || new_inner_size.height == 0 {
+                        window_occluded = true;
+                        return;
+                    } else {
+                        window_occluded = false;
+                    }
+
                     self.ctx
                         .screen_mgr_mut()
                         .update_scale_factor(scale_factor, *new_inner_size);
@@ -217,3 +248,9 @@ pub enum EngineInitError {
 
 #[derive(Error, Debug)]
 pub enum EngineExecError {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EngineLoopMode {
+    Wait,
+    Poll,
+}

@@ -1,4 +1,6 @@
-use enter_core_lib::engine::{Engine, EngineConfig, EngineExecError, EngineInitError};
+use enter_core_lib::engine::{
+    Engine, EngineConfig, EngineExecError, EngineInitError, EngineLoopMode,
+};
 use pollster::FutureExt;
 use thiserror::Error;
 
@@ -18,5 +20,5 @@ fn main() -> Result<(), Error> {
         height: 600,
     })
     .block_on()?
-    .run()
+    .run(EngineLoopMode::Poll)
 }
