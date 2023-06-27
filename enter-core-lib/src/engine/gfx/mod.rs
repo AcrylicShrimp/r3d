@@ -1,12 +1,13 @@
 use codegen::Handle;
 use itertools::Itertools;
+use std::cell::RefCell;
 use thiserror::Error;
 use wgpu::{
     Adapter, Backend, Backends, CompositeAlphaMode, CreateSurfaceError, Device, DeviceDescriptor,
     DeviceType, Features, Instance, InstanceDescriptor, PresentMode, Queue, RequestDeviceError,
     Surface, SurfaceConfiguration, TextureFormat, TextureUsages,
 };
-use winit::window::Window;
+use winit::{dpi::PhysicalSize, window::Window};
 
 mod color;
 mod material;
@@ -38,7 +39,7 @@ pub struct GfxContext {
     pub device: Device,
     pub queue: Queue,
     pub surface: Surface,
-    pub surface_config: SurfaceConfiguration,
+    pub surface_config: RefCell<SurfaceConfiguration>,
 }
 
 impl GfxContext {
@@ -70,7 +71,7 @@ impl GfxContext {
             .await?;
 
         let window_inner_size = window.inner_size();
-        let surface_config = SurfaceConfiguration {
+        let surface_config = RefCell::new(SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             format: TextureFormat::Bgra8Unorm,
             width: window_inner_size.width,
@@ -78,8 +79,8 @@ impl GfxContext {
             present_mode: PresentMode::Fifo,
             alpha_mode: CompositeAlphaMode::Auto,
             view_formats: vec![TextureFormat::Bgra8Unorm],
-        };
-        surface.configure(&device, &surface_config);
+        });
+        surface.configure(&device, &surface_config.borrow());
 
         Ok(GfxContext {
             instance,
@@ -88,6 +89,13 @@ impl GfxContext {
             surface,
             surface_config,
         })
+    }
+
+    pub fn resize(&self, size: PhysicalSize<u32>) {
+        let mut surface_config = self.surface_config.borrow_mut();
+        surface_config.width = size.width;
+        surface_config.height = size.height;
+        self.surface.configure(&self.device, &surface_config);
     }
 }
 

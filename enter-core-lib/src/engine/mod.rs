@@ -1,6 +1,3 @@
-pub mod gfx;
-pub mod scripting;
-
 use self::gfx::{
     GfxContext, GfxContextCreationError, GfxContextHandle, ScreenManager, ShaderLayoutManager,
 };
@@ -17,6 +14,9 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
 };
+
+pub mod gfx;
+pub mod scripting;
 
 pub struct Context {
     window: Window,
@@ -162,8 +162,8 @@ impl Engine {
                     event: WindowEvent::Resized(inner_size),
                     window_id: id,
                 } if id == window_id => {
-                    // TODO: Handle window resized event here.
                     self.ctx.screen_mgr_mut().update_size(inner_size);
+                    self.ctx.gfx_ctx().resize(inner_size);
 
                     return;
                 }
@@ -175,10 +175,10 @@ impl Engine {
                         },
                     window_id: id,
                 } if id == window_id => {
-                    // TODO: Handle scale factor changed event here.
                     self.ctx
                         .screen_mgr_mut()
                         .update_scale_factor(scale_factor, *new_inner_size);
+                    self.ctx.gfx_ctx().resize(*new_inner_size);
 
                     return;
                 }
