@@ -1,7 +1,5 @@
 use self::{
-    gfx::{
-    GfxContext, GfxContextCreationError, GfxContextHandle, ScreenManager, ShaderLayoutManager,
-    },
+    gfx::{GfxContext, GfxContextCreationError, GfxContextHandle, ScreenManager, ShaderManager},
     vsync::TargetFrameInterval,
 };
 use std::{
@@ -26,20 +24,20 @@ pub struct Context {
     window: Window,
     gfx_ctx: GfxContextHandle,
     screen_mgr: RefCell<ScreenManager>,
-    shader_layout_mgr: ShaderLayoutManager,
+    shader_mgr: ShaderManager,
 }
 
 impl Context {
     pub fn new(window: Window, gfx_ctx: GfxContext, screen_width: u32, screen_height: u32) -> Self {
         let gfx_ctx = GfxContextHandle::new(gfx_ctx);
         let screen_mgr = ScreenManager::new(screen_width, screen_height).into();
-        let shader_layout_mgr = ShaderLayoutManager::new(gfx_ctx.clone());
+        let shader_mgr = ShaderManager::new(gfx_ctx.clone());
 
         Self {
             window,
             gfx_ctx,
             screen_mgr,
-            shader_layout_mgr,
+            shader_mgr,
         }
     }
 
@@ -59,8 +57,8 @@ impl Context {
         self.screen_mgr.borrow_mut()
     }
 
-    pub fn shader_layout_mgr(&self) -> &ShaderLayoutManager {
-        &self.shader_layout_mgr
+    pub fn shader_mgr(&self) -> &ShaderManager {
+        &self.shader_mgr
     }
 }
 
@@ -201,6 +199,8 @@ impl Engine {
                     event: WindowEvent::Resized(inner_size),
                     window_id: id,
                 } if id == window_id => {
+                    self.ctx.screen_mgr_mut().update_size(inner_size);
+
                     if inner_size.width == 0 || inner_size.height == 0 {
                         window_occluded = true;
                         return;
@@ -208,7 +208,6 @@ impl Engine {
                         window_occluded = false;
                     }
 
-                    self.ctx.screen_mgr_mut().update_size(inner_size);
                     self.ctx.gfx_ctx().resize(inner_size);
 
                     return;
@@ -222,6 +221,9 @@ impl Engine {
                     window_id: id,
                 } if id == window_id => {
                     target_frame_interval.update_window(&self.ctx.window);
+                    self.ctx
+                        .screen_mgr_mut()
+                        .update_scale_factor(scale_factor, *new_inner_size);
 
                     if new_inner_size.width == 0 || new_inner_size.height == 0 {
                         window_occluded = true;
@@ -230,9 +232,6 @@ impl Engine {
                         window_occluded = false;
                     }
 
-                    self.ctx
-                        .screen_mgr_mut()
-                        .update_scale_factor(scale_factor, *new_inner_size);
                     self.ctx.gfx_ctx().resize(*new_inner_size);
 
                     return;

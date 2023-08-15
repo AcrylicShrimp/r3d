@@ -12,14 +12,18 @@ use winit::{dpi::PhysicalSize, window::Window};
 mod color;
 mod material;
 mod render_mgr;
+mod renderer;
 mod screen_mgr;
+mod sprite;
 mod sprite_texel_mapping;
 mod texture;
 
 pub use color::*;
 pub use material::*;
 pub use render_mgr::*;
+pub use renderer::*;
 pub use screen_mgr::*;
+pub use sprite::*;
 pub use sprite_texel_mapping::*;
 pub use texture::*;
 

@@ -1,5 +1,7 @@
+use codegen::Handle;
 use wgpu::{Sampler, TextureView};
 
+#[derive(Handle)]
 pub struct Texture {
     pub texture: wgpu::Texture,
     pub view: TextureView,

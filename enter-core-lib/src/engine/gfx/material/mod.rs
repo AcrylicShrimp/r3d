@@ -1,62 +1,66 @@
 use crate::engine::gfx::GfxContextHandle;
 use half::f16;
-use std::{
-    collections::{HashMap, HashSet},
-    num::NonZeroU32,
-    sync::Arc,
-};
+use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 use wgpu::{
     BindGroup, BindGroupDescriptor, BindGroupEntry, BindingResource, BindingType, Buffer,
-    BufferAddress, BufferBinding, BufferSize, Sampler, TextureView, VertexFormat,
+    BufferAddress, BufferBinding, BufferSize, Sampler, TextureView, VertexFormat, VertexStepMode,
 };
+use zerocopy::AsBytes;
 
-mod shader_layout;
+mod shader;
 mod shader_reflection;
 
-pub use shader_layout::*;
+pub use shader::*;
 pub use shader_reflection::*;
 
 pub struct Material {
     pub shader: ShaderHandle,
-    pub semantic_bindings: HashMap<SemanticShaderBindingKey, SemanticBindingData>,
-    pub semantic_inputs: HashSet<SemanticShaderInputKey>,
-    pub bind_properties: HashMap<String, BindGroupIndex>,
+    pub semantic_inputs: HashMap<SemanticShaderInputKey, SemanticInputData>,
+    pub bind_properties: HashMap<BindingPropKey, BindGroupIndex>,
     pub bind_group_holders: Vec<BindGroupHolder>,
     pub per_instance_properties: HashMap<String, PerInstanceProperty>,
 }
 
 impl Material {
     pub fn new(shader: ShaderHandle) -> Self {
-        let semantic_bindings = HashMap::from_iter(
-            shader
-                .reflected_shader
-                .bindings
-                .iter()
-                .filter_map(|binding| {
-                    binding.semantic_binding.map(|key| {
-                        (
-                            key,
-                            SemanticBindingData {
-                                group: binding.group,
-                            },
-                        )
-                    })
-                }),
-        );
-        let semantic_inputs = HashSet::from_iter(
+        let semantic_inputs = HashMap::from_iter(
             shader
                 .reflected_shader
                 .per_instance_input
                 .elements
                 .iter()
-                .filter_map(|input| input.semantic_input.map(|key| key))
+                .enumerate()
+                .filter_map(|(index, input)| {
+                    input.semantic_input.map(|key| {
+                        (
+                            key,
+                            SemanticInputData {
+                                step_mode: VertexStepMode::Instance,
+                                offset: input.attribute.offset,
+                                index,
+                            },
+                        )
+                    })
+                })
                 .chain(
                     shader
                         .reflected_shader
                         .per_vertex_input
                         .elements
                         .iter()
-                        .filter_map(|input| input.semantic_input.map(|key| key)),
+                        .enumerate()
+                        .filter_map(|(index, input)| {
+                            input.semantic_input.map(|key| {
+                                (
+                                    key,
+                                    SemanticInputData {
+                                        step_mode: VertexStepMode::Vertex,
+                                        offset: input.attribute.offset,
+                                        index,
+                                    },
+                                )
+                            })
+                        }),
                 ),
         );
         let bind_properties = HashMap::from_iter(
@@ -81,7 +85,10 @@ impl Material {
                         .find(|element| element.group == group && element.binding == binding)
                         .map(|element| {
                             (
-                                element.name.clone(),
+                                match element.semantic_binding {
+                                    Some(semantic_key) => BindingPropKey::SemanticKey(semantic_key),
+                                    None => BindingPropKey::StringKey(element.name.clone()),
+                                },
                                 BindGroupIndex {
                                     group_index,
                                     entry_index,
@@ -126,7 +133,6 @@ impl Material {
 
         Self {
             shader,
-            semantic_bindings,
             semantic_inputs,
             bind_properties,
             bind_group_holders,
@@ -136,10 +142,10 @@ impl Material {
 
     pub fn set_bind_property(
         &mut self,
-        name: impl AsRef<str>,
+        key: impl AsRef<BindingPropKey>,
         resource: impl Into<BindGroupEntryResource>,
     ) -> bool {
-        let index = if let Some(index) = self.bind_properties.get(name.as_ref()) {
+        let index = if let Some(index) = self.bind_properties.get(key.as_ref()) {
             *index
         } else {
             return false;
@@ -226,9 +232,17 @@ impl Material {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SemanticBindingData {
-    pub group: u32,
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum BindingPropKey {
+    SemanticKey(SemanticShaderBindingKey),
+    StringKey(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SemanticInputData {
+    pub step_mode: VertexStepMode,
+    pub offset: BufferAddress,
+    pub index: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -314,7 +328,6 @@ impl BindGroupEntryResource {
                     size: *size,
                 }),
             },
-
             BindGroupEntryResource::Sampler { sampler } => {
                 BindGroupEntryResourceBindingResourceBuilder::Resource {
                     resource: BindingResource::Sampler(&sampler),
@@ -399,6 +412,45 @@ pub enum PerInstancePropertyValue {
 }
 
 impl PerInstancePropertyValue {
+    pub fn as_bytes(&self) -> &[u8] {
+        match self {
+            PerInstancePropertyValue::Uint8x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Uint8x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Sint8x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Sint8x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Unorm8x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Unorm8x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Snorm8x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Snorm8x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Uint16x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Uint16x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Sint16x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Sint16x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Unorm16x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Unorm16x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Snorm16x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Snorm16x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float16x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float16x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float32(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float32x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float32x3(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float32x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Uint32(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Uint32x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Uint32x3(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Uint32x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Sint32(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Sint32x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Sint32x3(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Sint32x4(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float64(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float64x2(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float64x3(inner) => inner.as_bytes(),
+            PerInstancePropertyValue::Float64x4(inner) => inner.as_bytes(),
+        }
+    }
+
     pub fn to_vertex_format(&self) -> VertexFormat {
         match self {
             Self::Uint8x2(_) => VertexFormat::Uint8x2,
