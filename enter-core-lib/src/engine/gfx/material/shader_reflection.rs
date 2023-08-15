@@ -1,5 +1,5 @@
 use super::{
-    shader_layout::{SemanticShaderInputKey, ShaderLayoutManager},
+    shader::{SemanticShaderInputKey, ShaderManager},
     SemanticShaderBindingKey, SemanticShaderOutputKey,
 };
 use naga::{
@@ -152,11 +152,11 @@ pub struct ReflectedShaderOutputElement {
 }
 
 pub fn inspect_shader(
-    shader_layout_mgr: &ShaderLayoutManager,
+    shader_mgr: &ShaderManager,
     source: impl AsRef<str>,
 ) -> Result<ReflectedShader, ShaderInspectionError> {
     let module = parse_str(source.as_ref())?;
-    let bindings = reflect_globals(shader_layout_mgr, &module);
+    let bindings = reflect_globals(shader_mgr, &module);
 
     let mut vertex_entry_point_name = None;
     let mut fragment_entry_point_name = None;
@@ -170,7 +170,7 @@ pub fn inspect_shader(
                 vertex_entry_point_name = Some(entry_point.name.clone());
 
                 for vertex_input in
-                    reflect_vertex_entry_point(shader_layout_mgr, &module, &entry_point.function)
+                    reflect_vertex_entry_point(shader_mgr, &module, &entry_point.function)
                 {
                     match vertex_input.step_mode {
                         VertexStepMode::Vertex => {
@@ -186,7 +186,7 @@ pub fn inspect_shader(
                 fragment_entry_point_name = Some(entry_point.name.clone());
 
                 if let Some(fragment_outputs) =
-                    reflect_fragment_entry_point(shader_layout_mgr, &module, &entry_point.function)
+                    reflect_fragment_entry_point(shader_mgr, &module, &entry_point.function)
                 {
                     outputs = Some(fragment_outputs);
                 }
@@ -210,7 +210,7 @@ pub fn inspect_shader(
 }
 
 fn reflect_globals(
-    shader_layout_mgr: &ShaderLayoutManager,
+    shader_mgr: &ShaderManager,
     module: &Module,
 ) -> Vec<ReflectedShaderBindingElement> {
     let mut bindings = Vec::new();
@@ -237,44 +237,42 @@ fn reflect_globals(
         } else {
             continue;
         };
-        let semantic_binding = shader_layout_mgr
-            .find_semantic_binding(name)
-            .and_then(|key| {
-                let semantic_binding = shader_layout_mgr.get_semantic_binding(key).unwrap();
+        let semantic_binding = shader_mgr.find_semantic_binding(name).and_then(|key| {
+            let semantic_binding = shader_mgr.get_semantic_binding(key).unwrap();
 
-                match (&semantic_binding.ty, &element_kind) {
-                    (
-                        BindingType::Buffer {
-                            min_binding_size, ..
-                        },
-                        ReflectedShaderBindingElementKind::Buffer { size },
-                    ) if *min_binding_size == Some(*size) => {}
-                    (
-                        BindingType::Texture {
-                            sample_type,
-                            view_dimension,
-                            multisampled,
-                        },
-                        ReflectedShaderBindingElementKind::Texture {
-                            sample_type: element_sample_type,
-                            view_dimension: element_view_dimension,
-                            multisampled: element_multisampled,
-                            ..
-                        },
-                    ) if *sample_type == *element_sample_type
-                        && *view_dimension == *element_view_dimension
-                        && *multisampled == *element_multisampled => {}
-                    (
-                        BindingType::Sampler(binding_type),
-                        ReflectedShaderBindingElementKind::Sampler {
-                            binding_type: element_binding_type,
-                        },
-                    ) if *binding_type == *element_binding_type => {}
-                    _ => return None,
-                }
+            match (&semantic_binding.ty, &element_kind) {
+                (
+                    BindingType::Buffer {
+                        min_binding_size, ..
+                    },
+                    ReflectedShaderBindingElementKind::Buffer { size },
+                ) if *min_binding_size == Some(*size) => {}
+                (
+                    BindingType::Texture {
+                        sample_type,
+                        view_dimension,
+                        multisampled,
+                    },
+                    ReflectedShaderBindingElementKind::Texture {
+                        sample_type: element_sample_type,
+                        view_dimension: element_view_dimension,
+                        multisampled: element_multisampled,
+                        ..
+                    },
+                ) if *sample_type == *element_sample_type
+                    && *view_dimension == *element_view_dimension
+                    && *multisampled == *element_multisampled => {}
+                (
+                    BindingType::Sampler(binding_type),
+                    ReflectedShaderBindingElementKind::Sampler {
+                        binding_type: element_binding_type,
+                    },
+                ) if *binding_type == *element_binding_type => {}
+                _ => return None,
+            }
 
-                Some(key)
-            });
+            Some(key)
+        });
 
         bindings.push(ReflectedShaderBindingElement {
             semantic_binding,
@@ -289,7 +287,7 @@ fn reflect_globals(
 }
 
 fn reflect_vertex_entry_point(
-    shader_layout_mgr: &ShaderLayoutManager,
+    shader_mgr: &ShaderManager,
     module: &Module,
     function: &Function,
 ) -> Vec<ReflectedShaderInput> {
@@ -314,11 +312,7 @@ fn reflect_vertex_entry_point(
         };
 
         inputs.push(reflect_shader_input(
-            shader_layout_mgr,
-            module,
-            step_mode,
-            span,
-            members,
+            shader_mgr, module, step_mode, span, members,
         ));
     }
 
@@ -326,7 +320,7 @@ fn reflect_vertex_entry_point(
 }
 
 fn reflect_shader_input(
-    shader_layout_mgr: &ShaderLayoutManager,
+    shader_mgr: &ShaderManager,
     module: &Module,
     step_mode: VertexStepMode,
     span: u32,
@@ -353,8 +347,8 @@ fn reflect_shader_input(
         } else {
             continue;
         };
-        let semantic_input = shader_layout_mgr.find_semantic_input(name).and_then(|key| {
-            let semantic_input = shader_layout_mgr.get_semantic_input(key).unwrap();
+        let semantic_input = shader_mgr.find_semantic_input(name).and_then(|key| {
+            let semantic_input = shader_mgr.get_semantic_input(key).unwrap();
 
             if semantic_input.step_mode != step_mode {
                 return None;
@@ -386,7 +380,7 @@ fn reflect_shader_input(
 }
 
 fn reflect_fragment_entry_point(
-    shader_layout_mgr: &ShaderLayoutManager,
+    shader_mgr: &ShaderManager,
     module: &Module,
     function: &Function,
 ) -> Option<Vec<ReflectedShaderOutputElement>> {
@@ -414,11 +408,11 @@ fn reflect_fragment_entry_point(
         return None;
     };
 
-    Some(reflect_shader_output_elements(shader_layout_mgr, members))
+    Some(reflect_shader_output_elements(shader_mgr, members))
 }
 
 fn reflect_shader_output_elements(
-    shader_layout_mgr: &ShaderLayoutManager,
+    shader_mgr: &ShaderManager,
     members: &[StructMember],
 ) -> Vec<ReflectedShaderOutputElement> {
     let mut elements = Vec::with_capacity(members.len());
@@ -437,17 +431,15 @@ fn reflect_shader_output_elements(
         } else {
             continue;
         };
-        let semantic_output = shader_layout_mgr
-            .find_semantic_output(name)
-            .and_then(|key| {
-                let semantic_output = shader_layout_mgr.get_semantic_output(key).unwrap();
+        let semantic_output = shader_mgr.find_semantic_output(name).and_then(|key| {
+            let semantic_output = shader_mgr.get_semantic_output(key).unwrap();
 
-                if semantic_output.location != location {
-                    return None;
-                }
+            if semantic_output.location != location {
+                return None;
+            }
 
-                Some(key)
-            });
+            Some(key)
+        });
 
         elements.push(ReflectedShaderOutputElement {
             semantic_output,

@@ -1,6 +1,8 @@
+use super::{inspect_shader, ShaderInspectionError};
 use crate::engine::gfx::{GfxContextHandle, ReflectedShader};
 use codegen::Handle;
 use std::{
+    borrow::Cow,
     collections::{hash_map::Entry, HashMap},
     num::NonZeroU32,
 };
@@ -8,18 +10,20 @@ use wgpu::{
     BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType,
     ColorTargetState, FragmentState, FrontFace, MultisampleState, PipelineLayoutDescriptor,
     PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor,
-    ShaderModule, VertexBufferLayout, VertexFormat, VertexState, VertexStepMode,
+    ShaderModule, ShaderModuleDescriptor, ShaderSource, VertexBufferLayout, VertexFormat,
+    VertexState, VertexStepMode,
 };
 
-mod semantic_bindings {
-    use super::SemanticShaderBinding;
+pub mod semantic_bindings {
+    use super::{SemanticShaderBinding, SemanticShaderBindingKey};
     use std::{mem::size_of, num::NonZeroU64};
     use wgpu::{
         BindingType, BufferBindingType, SamplerBindingType, TextureSampleType, TextureViewDimension,
     };
 
+    pub const KEY_CAMERA_TRANSFORM: SemanticShaderBindingKey = SemanticShaderBindingKey::new(1);
     pub const CAMERA_TRANSFORM: SemanticShaderBinding = SemanticShaderBinding {
-        key: super::SemanticShaderBindingKey::new(1),
+        key: KEY_CAMERA_TRANSFORM,
         name: "camera_transform",
         ty: BindingType::Buffer {
             ty: BufferBindingType::Uniform,
@@ -31,8 +35,9 @@ mod semantic_bindings {
         count: None,
     };
 
+    pub const KEY_SPRITE_TEXTURE: SemanticShaderBindingKey = SemanticShaderBindingKey::new(101);
     pub const SPRITE_TEXTURE: SemanticShaderBinding = SemanticShaderBinding {
-        key: super::SemanticShaderBindingKey::new(101),
+        key: KEY_SPRITE_TEXTURE,
         name: "sprite_texture",
         ty: BindingType::Texture {
             sample_type: TextureSampleType::Float { filterable: true },
@@ -41,76 +46,79 @@ mod semantic_bindings {
         },
         count: None,
     };
+    pub const KEY_SPRITE_SAMPLER: SemanticShaderBindingKey = SemanticShaderBindingKey::new(102);
     pub const SPRITE_SAMPLER: SemanticShaderBinding = SemanticShaderBinding {
-        key: super::SemanticShaderBindingKey::new(102),
+        key: KEY_SPRITE_SAMPLER,
         name: "sprite_sampler",
         ty: BindingType::Sampler(SamplerBindingType::Filtering),
         count: None,
     };
 }
 
-mod semantic_inputs {
+pub mod semantic_inputs {
     use super::{SemanticShaderInput, SemanticShaderInputKey};
     use wgpu::{VertexFormat, VertexStepMode};
 
+    pub const KEY_POSITION: SemanticShaderInputKey = SemanticShaderInputKey::new(1);
     pub const POSITION: SemanticShaderInput = SemanticShaderInput {
-        key: SemanticShaderInputKey::new(1),
+        key: KEY_POSITION,
         name: "position",
         format: VertexFormat::Float32x2,
         step_mode: VertexStepMode::Vertex,
     };
+    pub const KEY_UV: SemanticShaderInputKey = SemanticShaderInputKey::new(2);
     pub const UV: SemanticShaderInput = SemanticShaderInput {
-        key: SemanticShaderInputKey::new(2),
+        key: KEY_UV,
         name: "uv",
         format: VertexFormat::Float32x2,
         step_mode: VertexStepMode::Vertex,
     };
 
+    pub const KEY_TRANSFORM_ROW_0: SemanticShaderInputKey = SemanticShaderInputKey::new(101);
     pub const TRANSFORM_ROW_0: SemanticShaderInput = SemanticShaderInput {
-        key: SemanticShaderInputKey::new(101),
+        key: KEY_TRANSFORM_ROW_0,
         name: "transform_row_0",
         format: VertexFormat::Float32x3,
         step_mode: VertexStepMode::Instance,
     };
+    pub const KEY_TRANSFORM_ROW_1: SemanticShaderInputKey = SemanticShaderInputKey::new(102);
     pub const TRANSFORM_ROW_1: SemanticShaderInput = SemanticShaderInput {
-        key: SemanticShaderInputKey::new(102),
+        key: KEY_TRANSFORM_ROW_1,
         name: "transform_row_1",
         format: VertexFormat::Float32x3,
         step_mode: VertexStepMode::Instance,
     };
+    pub const KEY_TRANSFORM_ROW_2: SemanticShaderInputKey = SemanticShaderInputKey::new(103);
     pub const TRANSFORM_ROW_2: SemanticShaderInput = SemanticShaderInput {
-        key: SemanticShaderInputKey::new(103),
+        key: KEY_TRANSFORM_ROW_2,
         name: "transform_row_2",
         format: VertexFormat::Float32x3,
         step_mode: VertexStepMode::Instance,
     };
 
-    pub const SPRITE_RECT: SemanticShaderInput = SemanticShaderInput {
-        key: SemanticShaderInputKey::new(201),
-        name: "sprite_rect",
-        format: VertexFormat::Float32x4,
-        step_mode: VertexStepMode::Instance,
-    };
+    pub const KEY_SPRITE_SIZE: SemanticShaderInputKey = SemanticShaderInputKey::new(202);
     pub const SPRITE_SIZE: SemanticShaderInput = SemanticShaderInput {
-        key: SemanticShaderInputKey::new(202),
+        key: KEY_SPRITE_SIZE,
         name: "sprite_size",
-        format: VertexFormat::Float32x2,
+        format: VertexFormat::Uint32x2,
         step_mode: VertexStepMode::Instance,
     };
+    pub const KEY_SPRITE_COLOR: SemanticShaderInputKey = SemanticShaderInputKey::new(203);
     pub const SPRITE_COLOR: SemanticShaderInput = SemanticShaderInput {
-        key: SemanticShaderInputKey::new(203),
+        key: KEY_SPRITE_COLOR,
         name: "sprite_color",
         format: VertexFormat::Float32x4,
         step_mode: VertexStepMode::Instance,
     };
 }
 
-mod semantic_outputs {
+pub mod semantic_outputs {
     use super::{SemanticShaderOutput, SemanticShaderOutputKey};
     use wgpu::{BlendState, ColorTargetState, ColorWrites, TextureFormat};
 
+    pub const KEY_COLOR: SemanticShaderOutputKey = SemanticShaderOutputKey::new(1);
     pub const COLOR: SemanticShaderOutput = SemanticShaderOutput {
-        key: SemanticShaderOutputKey::new(1),
+        key: KEY_COLOR,
         name: "color",
         target: ColorTargetState {
             format: TextureFormat::Bgra8UnormSrgb,
@@ -186,7 +194,7 @@ pub struct Shader {
     pub reflected_shader: ReflectedShader,
 }
 
-pub struct ShaderLayoutManager {
+pub struct ShaderManager {
     gfx_ctx: GfxContextHandle,
     binding_names: HashMap<&'static str, SemanticShaderBindingKey>,
     input_names: HashMap<&'static str, SemanticShaderInputKey>,
@@ -196,7 +204,7 @@ pub struct ShaderLayoutManager {
     outputs: HashMap<SemanticShaderOutputKey, SemanticShaderOutput>,
 }
 
-impl ShaderLayoutManager {
+impl ShaderManager {
     pub fn new(gfx_ctx: GfxContextHandle) -> Self {
         let mut this = Self {
             gfx_ctx,
@@ -217,7 +225,6 @@ impl ShaderLayoutManager {
         this.register_input(semantic_inputs::TRANSFORM_ROW_0);
         this.register_input(semantic_inputs::TRANSFORM_ROW_1);
         this.register_input(semantic_inputs::TRANSFORM_ROW_2);
-        this.register_input(semantic_inputs::SPRITE_RECT);
         this.register_input(semantic_inputs::SPRITE_SIZE);
         this.register_input(semantic_inputs::SPRITE_COLOR);
 
@@ -271,7 +278,33 @@ impl ShaderLayoutManager {
         self.outputs.get(&key)
     }
 
-    pub fn create_render_pipeline(
+    pub fn create_shader(
+        &self,
+        source: impl AsRef<str>,
+    ) -> Result<ShaderHandle, ShaderInspectionError> {
+        let (reflected_shader, shader_module) = self.compile_shader(source)?;
+
+        Ok(self.build_shader(shader_module, reflected_shader))
+    }
+
+    fn compile_shader(
+        &self,
+        source: impl AsRef<str>,
+    ) -> Result<(ReflectedShader, ShaderModule), ShaderInspectionError> {
+        let source = source.as_ref();
+        let reflected_shader = inspect_shader(self, source)?;
+        let shader_module = self
+            .gfx_ctx
+            .device
+            .create_shader_module(ShaderModuleDescriptor {
+                label: None,
+                source: ShaderSource::Wgsl(Cow::Borrowed(source)),
+            });
+
+        Ok((reflected_shader, shader_module))
+    }
+
+    fn build_shader(
         &self,
         shader_module: ShaderModule,
         reflected_shader: ReflectedShader,
