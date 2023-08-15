@@ -1,5 +1,5 @@
 use enter_core_lib::engine::{
-    Engine, EngineConfig, EngineExecError, EngineInitError, EngineLoopMode,
+    Engine, EngineConfig, EngineExecError, EngineInitError, EngineLoopMode, EngineTargetFps,
 };
 use pollster::FutureExt;
 use thiserror::Error;
@@ -20,5 +20,5 @@ fn main() -> Result<(), Error> {
         height: 600,
     })
     .block_on()?
-    .run(EngineLoopMode::Poll)
+    .run(EngineLoopMode::Poll, EngineTargetFps::VSync)
 }

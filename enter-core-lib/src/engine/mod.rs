@@ -1,11 +1,14 @@
-use self::gfx::{
+use self::{
+    gfx::{
     GfxContext, GfxContextCreationError, GfxContextHandle, ScreenManager, ShaderLayoutManager,
+    },
+    vsync::TargetFrameInterval,
 };
 use std::{
     cell::{Ref, RefCell, RefMut},
+    num::NonZeroU32,
     sync::Arc,
-    thread::sleep,
-    time::Duration,
+    time::Instant,
 };
 use thiserror::Error;
 use winit::{
@@ -17,6 +20,7 @@ use winit::{
 
 pub mod gfx;
 pub mod scripting;
+pub mod vsync;
 
 pub struct Context {
     window: Window,
@@ -91,11 +95,20 @@ impl Engine {
         Ok(Self { event_loop, ctx })
     }
 
-    pub fn run(self, loop_mode: EngineLoopMode) -> ! {
+    pub fn run(self, loop_mode: EngineLoopMode, target_fps: EngineTargetFps) -> ! {
         self.ctx.window.set_visible(true);
 
         let window_id = self.ctx.window.id();
         let mut window_occluded = false;
+        let mut target_frame_interval = TargetFrameInterval::new(
+            match target_fps {
+                EngineTargetFps::VSync => None,
+                EngineTargetFps::MilliHertz(millihertz) => Some(millihertz),
+                EngineTargetFps::Unlimited => None,
+            },
+            self.ctx.window(),
+        );
+        let mut last_frame_time = Instant::now();
 
         self.event_loop.run(move |event, _, control_flow| {
             *control_flow = match loop_mode {
@@ -109,8 +122,17 @@ impl Engine {
                         return;
                     }
 
+                    let now = Instant::now();
+
+                    if now - last_frame_time < target_frame_interval.interval() {
+                        return;
+                    }
+
+                    last_frame_time = now;
+
+                    // TODO: Update here.
+
                     if window_occluded {
-                        sleep(Duration::from_millis(60));
                         return;
                     }
 
@@ -199,6 +221,8 @@ impl Engine {
                         },
                     window_id: id,
                 } if id == window_id => {
+                    target_frame_interval.update_window(&self.ctx.window);
+
                     if new_inner_size.width == 0 || new_inner_size.height == 0 {
                         window_occluded = true;
                         return;
@@ -251,6 +275,25 @@ pub enum EngineExecError {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EngineLoopMode {
-    Wait,
     Poll,
+    Wait,
+}
+
+impl Default for EngineLoopMode {
+    fn default() -> Self {
+        Self::Poll
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EngineTargetFps {
+    VSync,
+    MilliHertz(NonZeroU32),
+    Unlimited,
+}
+
+impl Default for EngineTargetFps {
+    fn default() -> Self {
+        Self::VSync
+    }
 }
