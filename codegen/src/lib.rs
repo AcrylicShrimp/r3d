@@ -1,4 +1,4 @@
-mod handle;
+mod handles;
 mod lua;
 
 use proc_macro::TokenStream;
@@ -63,5 +63,11 @@ pub fn ops_extra(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_derive(Handle)]
 #[proc_macro_error]
 pub fn handle(item: TokenStream) -> TokenStream {
-    handle::handle(item)
+    handles::handle(item)
+}
+
+#[proc_macro_derive(HandleMut)]
+#[proc_macro_error]
+pub fn handle_mut(item: TokenStream) -> TokenStream {
+    handles::handle_mut(item)
 }

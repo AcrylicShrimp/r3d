@@ -9,7 +9,6 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-paste = { version = "1" }
 proc-macro-error = { version ="1" }
 proc-macro2 = { version = "1" }
 quote = { version = "1" }
