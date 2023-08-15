@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 codegen = { path = "../codegen" }
 colored = { version = "2" }
-half = { version = "2", features = ["num-traits"] }
+half = { version = "2", features = ["num-traits", "zerocopy"] }
 itertools = { version = "0.10" }
 mlua = { version = "0.8", features = ["lua54", "vendored"] }
 naga = { version = "0.12", features = ["wgsl-in"] }
@@ -19,3 +19,4 @@ smartstring = { version = "1" }
 thiserror = { version = "1" }
 wgpu = { version = "0.16" }
 winit = { version = "0.28" }
+zerocopy = { version = "0.6" }
