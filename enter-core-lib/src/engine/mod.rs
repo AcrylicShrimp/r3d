@@ -1,6 +1,7 @@
 use self::{
     gfx::{GfxContext, GfxContextCreationError, GfxContextHandle, ScreenManager, ShaderManager},
     vsync::TargetFrameInterval,
+    world::WorldManager,
 };
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -18,12 +19,16 @@ use winit::{
 
 pub mod gfx;
 pub mod math;
+pub mod object;
 pub mod scripting;
+pub mod transform;
 pub mod vsync;
+pub mod world;
 
 pub struct Context {
     window: Window,
     gfx_ctx: GfxContextHandle,
+    world_mgr: RefCell<WorldManager>,
     screen_mgr: RefCell<ScreenManager>,
     shader_mgr: ShaderManager,
 }
@@ -31,12 +36,14 @@ pub struct Context {
 impl Context {
     pub fn new(window: Window, gfx_ctx: GfxContext, screen_width: u32, screen_height: u32) -> Self {
         let gfx_ctx = GfxContextHandle::new(gfx_ctx);
+        let world_mgr = WorldManager::new().into();
         let screen_mgr = ScreenManager::new(screen_width, screen_height).into();
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
 
         Self {
             window,
             gfx_ctx,
+            world_mgr,
             screen_mgr,
             shader_mgr,
         }
@@ -48,6 +55,14 @@ impl Context {
 
     pub fn gfx_ctx(&self) -> &GfxContextHandle {
         &self.gfx_ctx
+    }
+
+    pub fn world_mgr(&self) -> Ref<WorldManager> {
+        self.world_mgr.borrow()
+    }
+
+    pub fn world_mgr_mut(&self) -> RefMut<WorldManager> {
+        self.world_mgr.borrow_mut()
     }
 
     pub fn screen_mgr(&self) -> Ref<ScreenManager> {
