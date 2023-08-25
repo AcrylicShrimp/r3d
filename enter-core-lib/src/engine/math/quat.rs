@@ -1,7 +1,7 @@
 use super::Vec3;
 use std::{
     fmt::Display,
-    ops::{Mul, MulAssign},
+    ops::{Mul, MulAssign, Neg},
 };
 use zerocopy::AsBytes;
 
@@ -139,6 +139,47 @@ impl Mul for Quat {
 impl MulAssign for Quat {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
+    }
+}
+
+impl Mul<Vec3> for Quat {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        let qvec = Vec3::new(self.x, self.y, self.z);
+        let uv = Vec3::cross(qvec, rhs);
+        let uuv = Vec3::cross(qvec, uv);
+        rhs + ((self.w * uv) + uuv) * 2.0
+    }
+}
+
+impl Mul<Quat> for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Quat) -> Self::Output {
+        let qvec = Vec3::new(rhs.x, rhs.y, rhs.z);
+        let uv = Vec3::cross(qvec, self);
+        let uuv = Vec3::cross(qvec, uv);
+        self + ((rhs.w * uv) + uuv) * 2.0
+    }
+}
+
+impl MulAssign<Quat> for Vec3 {
+    fn mul_assign(&mut self, rhs: Quat) {
+        *self = *self * rhs;
+    }
+}
+
+impl Neg for Quat {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+            w: self.w,
+        }
     }
 }
 
