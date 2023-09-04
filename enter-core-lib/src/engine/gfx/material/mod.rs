@@ -160,7 +160,7 @@ impl Material {
         let entry_holder = &mut bind_group_holder.entries[index.entry_index];
         let resource = resource.into();
 
-        if resource.is_match(entry_holder.binding_ty, entry_holder.count) {
+        if !resource.is_match(entry_holder.binding_ty, entry_holder.count) {
             return false;
         }
 
