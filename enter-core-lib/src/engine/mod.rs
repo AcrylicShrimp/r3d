@@ -9,6 +9,7 @@ use self::{
     vsync::TargetFrameInterval,
     world::WorldManager,
 };
+use codegen::Handle;
 use std::{
     cell::{Ref, RefCell, RefMut},
     mem::MaybeUninit,
@@ -33,12 +34,13 @@ pub mod transform;
 pub mod vsync;
 pub mod world;
 
-static mut CONTEXT: MaybeUninit<Arc<Context>> = MaybeUninit::uninit();
+static mut CONTEXT: MaybeUninit<ContextHandle> = MaybeUninit::uninit();
 
 pub fn use_context() -> &'static Context {
-    unsafe { CONTEXT.assume_init_ref() }.as_ref()
+    unsafe { CONTEXT.assume_init_ref() }
 }
 
+#[derive(Handle)]
 pub struct Context {
     window: Window,
     gfx_ctx: GfxContextHandle,
@@ -110,7 +112,7 @@ impl Context {
 
 pub struct Engine {
     event_loop: EventLoop<()>,
-    ctx: Arc<Context>,
+    ctx: ContextHandle,
 }
 
 impl Engine {
@@ -124,7 +126,7 @@ impl Engine {
             .build(&event_loop)
             .unwrap();
         let gfx_ctx = GfxContext::new(&window).await?;
-        let ctx = Arc::new(Context::new(window, gfx_ctx, config.width, config.height));
+        let ctx = ContextHandle::new(Context::new(window, gfx_ctx, config.width, config.height));
 
         unsafe {
             CONTEXT.write(ctx.clone());
