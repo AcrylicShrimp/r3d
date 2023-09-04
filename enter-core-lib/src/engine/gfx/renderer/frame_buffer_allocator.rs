@@ -68,6 +68,7 @@ impl FrameBufferAllocator {
     }
 
     pub fn finish(&mut self) -> CommandBuffer {
+        self.staging_belt.finish();
         replace(
             &mut self.staging_belt_encoder,
             create_staging_belt_encoder(&self.gfx_context.device),
