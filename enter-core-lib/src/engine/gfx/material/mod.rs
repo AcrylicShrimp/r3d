@@ -189,7 +189,7 @@ impl Material {
         true
     }
 
-    pub fn update_bind_group(&mut self, gfx_context: GfxContextHandle) {
+    pub fn update_bind_group(&mut self, device: &Device) {
         for bind_group_holder in &mut self.bind_group_holders {
             if !bind_group_holder.is_dirty {
                 continue;
@@ -229,11 +229,11 @@ impl Material {
                 },
             ));
 
-            gfx_context.device.create_bind_group(&BindGroupDescriptor {
+            bind_group_holder.bind_group = Some(device.create_bind_group(&BindGroupDescriptor {
                 label: None,
-                layout: &layout.layout,
+                layout: layout.as_ref(),
                 entries: &entries,
-            });
+            }));
         }
     }
 }
