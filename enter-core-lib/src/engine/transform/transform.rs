@@ -14,6 +14,15 @@ impl Transform {
         Default::default()
     }
 
+    pub fn from_mat4(matrix: &Mat4) -> Self {
+        let (position, rotation, scale) = matrix.split();
+        Self {
+            position,
+            rotation,
+            scale,
+        }
+    }
+
     pub fn matrix(&self) -> Mat4 {
         Mat4::srt(self.position, self.rotation, self.scale)
     }

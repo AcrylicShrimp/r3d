@@ -1,5 +1,5 @@
 use super::{
-    object::{Object, ObjectHierarchy, ObjectIdAllocator},
+    object::{Object, ObjectHierarchy, ObjectId, ObjectIdAllocator},
     transform::Transform,
 };
 use specs::prelude::*;
@@ -40,14 +40,29 @@ impl WorldManager {
         &mut self.object_hierarchy
     }
 
-    pub fn create_object_builder(&mut self) -> EntityBuilder {
+    pub fn create_object_builder(
+        &mut self,
+        transform: Option<Transform>,
+    ) -> (ObjectId, EntityBuilder) {
         let object_id = self.object_id_allocator.alloc();
         let builder = self.world.create_entity();
         let entity = builder.entity;
 
         self.object_hierarchy.add(object_id, entity);
-        builder
-            .with(Object::new(entity, object_id))
-            .with(Transform::default())
+
+        (
+            object_id,
+            builder
+                .with(Object::new(entity, object_id))
+                .with(transform.unwrap_or_default()),
+        )
+    }
+
+    pub fn split(&self) -> (&World, &ObjectHierarchy) {
+        (&self.world, &self.object_hierarchy)
+    }
+
+    pub fn split_mut(&mut self) -> (&mut World, &mut ObjectHierarchy) {
+        (&mut self.world, &mut self.object_hierarchy)
     }
 }
