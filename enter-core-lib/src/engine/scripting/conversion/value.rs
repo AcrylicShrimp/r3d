@@ -21,7 +21,7 @@ macro_rules! impl_lua_readonly {
     ($ty:ty) => {
         impl ConversionByValueReadOnly for $ty {
             fn perform_convertion_to_lua<'lua>(&self, lua: &'lua Lua) -> LuaResult<LuaValue<'lua>> {
-                self.clone().to_lua(lua)
+                self.clone().into_lua(lua)
             }
         }
     };

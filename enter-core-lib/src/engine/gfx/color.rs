@@ -27,7 +27,7 @@ pub enum ColorParseHexError {
     IncorrectLengthError,
 }
 
-#[derive(LuaUserData, Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Color {
     pub r: f32,
     pub g: f32,
@@ -35,7 +35,7 @@ pub struct Color {
     pub a: f32,
 }
 
-#[lua_user_data_method]
+// #[lua_user_data_method]
 #[ops_to_string]
 #[ops_extra]
 impl Color {
@@ -233,10 +233,10 @@ impl Display for Color {
     }
 }
 
-impl UserDataOpsProvider for Color {
-    fn add_ops<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
-        methods.add_meta_function(LuaMetaMethod::Mul, |_lua, (lhs, rhs): (Self, Self)| {
-            Ok(lhs * rhs)
-        });
-    }
-}
+// impl UserDataOpsProvider for Color {
+//     fn add_ops<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
+//         methods.add_meta_function(LuaMetaMethod::Mul, |_lua, (lhs, rhs): (Self, Self)| {
+//             Ok(lhs * rhs)
+//         });
+//     }
+// }

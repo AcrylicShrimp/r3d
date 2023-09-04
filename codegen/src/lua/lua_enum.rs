@@ -64,7 +64,7 @@ pub fn lua_enum(item: TokenStream) -> TokenStream {
 
         impl #impl_generics crate::engine::scripting::ConversionByValueReadOnly for <#ty_name #ty_generics as crate::engine::scripting::LuaType>::LuaType #where_clause {
             fn perform_convertion_to_lua<'lua>(&self, lua: &'lua mlua::Lua) -> mlua::Result<mlua::Value<'lua>> {
-                <Self as mlua::ToLua>::to_lua(self.clone(), lua)
+                <Self as mlua::IntoLua>::into_lua(self.clone(), lua)
             }
         }
 
