@@ -1,5 +1,10 @@
-use super::{CachedPipeline, MaterialHandle, PipelineCache, ShaderManager};
+use super::{
+    semantic_inputs::{self},
+    CachedPipeline, MaterialHandle, PipelineCache, ShaderManager,
+};
+use crate::engine::object::{ObjectHierarchy, ObjectId};
 use wgpu::{Buffer, RenderPass, VertexStepMode};
+use zerocopy::AsBytes;
 
 mod device_buffer;
 mod frame_buffer_allocator;
@@ -21,8 +26,8 @@ pub struct RenderingCommand {
     pub pipeline: CachedPipeline,
     pub material: MaterialHandle,
     pub vertex_count: u32,
-    pub per_instance_buffer: Option<GenericBufferAllocation<Buffer>>,
     pub per_vertex_buffers: Vec<GenericBufferAllocation<Buffer>>,
+    pub per_instance_buffer: Option<GenericBufferAllocation<Buffer>>,
 }
 
 impl RenderingCommand {
@@ -50,13 +55,16 @@ impl RenderingCommand {
 }
 
 pub fn build_rendering_command(
+    object_id: ObjectId,
+    object_hierarchy: &ObjectHierarchy,
     renderer: &mut dyn Renderer,
     shader_mgr: &ShaderManager,
     pipeline_cache: &mut PipelineCache,
     frame_buffer_allocator: &mut FrameBufferAllocator,
 ) -> Option<RenderingCommand> {
-    let pipeline_provider = renderer.pipeline_provider();
+    let matrix = object_hierarchy.matrix(object_id);
 
+    let pipeline_provider = renderer.pipeline_provider();
     let pipeline =
         if let Some(pipeline) = pipeline_provider.obtain_pipeline(shader_mgr, pipeline_cache) {
             pipeline
@@ -72,20 +80,32 @@ pub fn build_rendering_command(
     let per_instance_buffer = frame_buffer_allocator
         .alloc_staging_buffer(material.shader.reflected_shader.per_instance_input.stride);
 
-    for (key, input_data) in &material.semantic_inputs {
-        match input_data.step_mode {
-            VertexStepMode::Vertex => {}
-            VertexStepMode::Instance => {
-                let size = material.shader.reflected_shader.per_instance_input.elements
-                    [input_data.index]
-                    .attribute
-                    .format
-                    .size();
+    for (&key, input_data) in &material.semantic_inputs {
+        if input_data.step_mode != VertexStepMode::Instance {
+            continue;
+        }
 
-                renderer.copy_semantic_per_instance_input(
-                    *key,
-                    &mut per_instance_buffer.slice(input_data.offset, size),
-                );
+        let size = material.shader.reflected_shader.per_instance_input.elements[input_data.index]
+            .attribute
+            .format
+            .size();
+        let allocation = &mut per_instance_buffer.slice(input_data.offset, size);
+
+        match key {
+            semantic_inputs::KEY_TRANSFORM_ROW_0 => {
+                allocation.copy_from_slice(matrix.row(0).as_bytes())
+            }
+            semantic_inputs::KEY_TRANSFORM_ROW_1 => {
+                allocation.copy_from_slice(matrix.row(1).as_bytes())
+            }
+            semantic_inputs::KEY_TRANSFORM_ROW_2 => {
+                allocation.copy_from_slice(matrix.row(2).as_bytes())
+            }
+            semantic_inputs::KEY_TRANSFORM_ROW_3 => {
+                allocation.copy_from_slice(matrix.row(3).as_bytes())
+            }
+            _ => {
+                renderer.copy_semantic_per_instance_input(key, allocation);
             }
         }
     }
@@ -104,7 +124,7 @@ pub fn build_rendering_command(
         pipeline,
         material,
         vertex_count: renderer.vertex_count(),
-        per_instance_buffer,
         per_vertex_buffers: renderer.vertex_buffers(),
+        per_instance_buffer,
     })
 }

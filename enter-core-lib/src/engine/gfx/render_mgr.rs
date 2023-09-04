@@ -3,6 +3,7 @@ use super::{
     FrameBufferAllocator, GfxContextHandle, PipelineCache, PipelineLayoutCache, Renderer,
     RenderingCommand, ShaderManager,
 };
+use crate::engine::object::{ObjectHierarchy, ObjectId};
 use wgpu::{
     Color, CommandBuffer, CommandEncoder, CommandEncoderDescriptor, LoadOp, Operations, RenderPass,
     RenderPassColorAttachment, RenderPassDepthStencilAttachment, SurfaceError, TextureView,
@@ -99,10 +100,14 @@ impl RenderManager {
 
     pub fn build_rendering_command(
         &mut self,
+        object_id: ObjectId,
+        object_hierarchy: &ObjectHierarchy,
         renderer: &mut dyn Renderer,
         shader_mgr: &ShaderManager,
     ) -> Option<RenderingCommand> {
         build_rendering_command(
+            object_id,
+            object_hierarchy,
             renderer,
             shader_mgr,
             &mut self.pipeline_cache,

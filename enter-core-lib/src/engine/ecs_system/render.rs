@@ -1,4 +1,4 @@
-use crate::engine::{gfx::MeshRenderer, use_context};
+use crate::engine::{gfx::MeshRenderer, object::Object, use_context};
 use specs::prelude::*;
 use wgpu::Color;
 
@@ -11,23 +11,35 @@ impl RenderSystem {
 }
 
 impl<'a> System<'a> for RenderSystem {
-    type SystemData = (WriteStorage<'a, MeshRenderer>,);
+    type SystemData = (ReadStorage<'a, Object>, WriteStorage<'a, MeshRenderer>);
 
-    fn run(&mut self, (mut mesh_renderers,): Self::SystemData) {
+    fn run(&mut self, (objects, mut mesh_renderers): Self::SystemData) {
         let context = use_context();
         let mut render_mgr = context.render_mgr_mut();
         let shader_mgr = context.shader_mgr();
+        let world_mgr = context.world_mgr();
+        let object_hierarchy = world_mgr.object_hierarchy();
 
         let surface_texture = context.gfx_ctx().surface.get_current_texture().unwrap();
         let surface_texture_view = surface_texture.texture.create_view(&Default::default());
         let mut encoder = render_mgr.create_encoder();
 
-        let mesh_renderers = (&mut mesh_renderers,).join().collect::<Vec<_>>();
-
+        let renderers = (&objects, &mut mesh_renderers).join().collect::<Vec<_>>();
         let mut rendering_commands = Vec::new();
 
-        for (mesh_renderer,) in mesh_renderers {
-            if let Some(command) = render_mgr.build_rendering_command(mesh_renderer, shader_mgr) {
+        for (object, mesh_renderer) in renderers {
+            let object_id = object.object_id();
+
+            if !object_hierarchy.is_active(object.object_id()) {
+                continue;
+            }
+
+            if let Some(command) = render_mgr.build_rendering_command(
+                object_id,
+                object_hierarchy,
+                mesh_renderer,
+                shader_mgr,
+            ) {
                 rendering_commands.push(command);
             }
         }
