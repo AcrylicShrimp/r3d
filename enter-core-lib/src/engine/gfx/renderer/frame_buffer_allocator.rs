@@ -62,12 +62,7 @@ impl FrameBufferAllocator {
             &self.gfx_context.device,
         );
 
-        allocation.with_data(|data| {
-            view.copy_from_slice(
-                &data[allocation.offset() as usize
-                    ..(allocation.offset() + allocation.size().get()) as usize],
-            )
-        });
+        allocation.with_data(|data| view.copy_from_slice(data));
 
         Some(device_allocation)
     }
