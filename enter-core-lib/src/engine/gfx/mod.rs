@@ -9,9 +9,11 @@ use wgpu::{
 };
 use winit::{dpi::PhysicalSize, window::Window};
 
+mod camera;
 mod color;
 mod depth_stencil;
 mod material;
+mod mesh;
 mod render_mgr;
 mod renderer;
 mod screen_mgr;
@@ -19,9 +21,11 @@ mod sprite;
 mod sprite_texel_mapping;
 mod texture;
 
+pub use camera::*;
 pub use color::*;
 pub use depth_stencil::*;
 pub use material::*;
+pub use mesh::*;
 pub use render_mgr::*;
 pub use renderer::*;
 pub use screen_mgr::*;

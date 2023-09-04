@@ -1,22 +1,30 @@
 use self::{
-    gfx::{GfxContext, GfxContextCreationError, GfxContextHandle, ScreenManager, ShaderManager},
+    ecs_system::render::RenderSystem,
+    gfx::{
+        semantic_bindings::KEY_CAMERA_TRANSFORM, BindGroupEntryResource, BindingPropKey,
+        DepthStencilMode, GfxContext, GfxContextCreationError, GfxContextHandle, Material,
+        MaterialHandle, Mesh, MeshHandle, RenderManager, ScreenManager, ShaderManager,
+    },
+    math::{Mat4, Vec3},
     vsync::TargetFrameInterval,
     world::WorldManager,
 };
 use std::{
     cell::{Ref, RefCell, RefMut},
+    mem::MaybeUninit,
     num::NonZeroU32,
     sync::Arc,
     time::Instant,
 };
 use thiserror::Error;
 use winit::{
-    dpi::LogicalSize,
+    dpi::{LogicalSize, PhysicalSize},
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
 };
 
+pub mod ecs_system;
 pub mod gfx;
 pub mod math;
 pub mod object;
@@ -25,11 +33,18 @@ pub mod transform;
 pub mod vsync;
 pub mod world;
 
+static mut CONTEXT: MaybeUninit<Arc<Context>> = MaybeUninit::uninit();
+
+pub fn use_context() -> &'static Context {
+    unsafe { CONTEXT.assume_init_ref() }.as_ref()
+}
+
 pub struct Context {
     window: Window,
     gfx_ctx: GfxContextHandle,
     world_mgr: RefCell<WorldManager>,
     screen_mgr: RefCell<ScreenManager>,
+    render_mgr: RefCell<RenderManager>,
     shader_mgr: ShaderManager,
 }
 
@@ -38,6 +53,12 @@ impl Context {
         let gfx_ctx = GfxContextHandle::new(gfx_ctx);
         let world_mgr = WorldManager::new().into();
         let screen_mgr = ScreenManager::new(screen_width, screen_height).into();
+        let render_mgr = RenderManager::new(
+            gfx_ctx.clone(),
+            PhysicalSize::new(screen_width, screen_height),
+            DepthStencilMode::DepthOnly,
+        )
+        .into();
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
 
         Self {
@@ -45,6 +66,7 @@ impl Context {
             gfx_ctx,
             world_mgr,
             screen_mgr,
+            render_mgr,
             shader_mgr,
         }
     }
@@ -73,6 +95,14 @@ impl Context {
         self.screen_mgr.borrow_mut()
     }
 
+    pub fn render_mgr(&self) -> Ref<RenderManager> {
+        self.render_mgr.borrow()
+    }
+
+    pub fn render_mgr_mut(&self) -> RefMut<RenderManager> {
+        self.render_mgr.borrow_mut()
+    }
+
     pub fn shader_mgr(&self) -> &ShaderManager {
         &self.shader_mgr
     }
@@ -96,20 +126,36 @@ impl Engine {
         let gfx_ctx = GfxContext::new(&window).await?;
         let ctx = Arc::new(Context::new(window, gfx_ctx, config.width, config.height));
 
+        unsafe {
+            CONTEXT.write(ctx.clone());
+        }
+
+        {
+            let mut world_mgr = ctx.world_mgr_mut();
+            let world = world_mgr.world_mut();
+            world.register::<MeshRenderer>();
+        }
+
         {
             let scale_factor = ctx.window.scale_factor();
+            let physical_size =
+                LogicalSize::new(config.width, config.height).to_physical(scale_factor);
             let mut screen_mgr = ctx.screen_mgr_mut();
-            screen_mgr.update_scale_factor(
-                scale_factor,
-                LogicalSize::new(config.width, config.height).to_physical(scale_factor),
-            );
-            // TODO: Apply scale factor to the rendering context.
+            screen_mgr.update_scale_factor(scale_factor, physical_size);
+            ctx.gfx_ctx().resize(physical_size);
         }
 
         Ok(Self { event_loop, ctx })
     }
 
-    pub fn run(self, loop_mode: EngineLoopMode, target_fps: EngineTargetFps) -> ! {
+    pub fn run(
+        self,
+        loop_mode: EngineLoopMode,
+        target_fps: EngineTargetFps,
+    ) -> Result<(), EngineExecError> {
+
+        let mut render_system = RenderSystem::new();
+
         self.ctx.window.set_visible(true);
 
         let window_id = self.ctx.window.id();
@@ -150,7 +196,7 @@ impl Engine {
                         return;
                     }
 
-                    // TODO: Render here.
+                    render_system.run_now(&self.ctx.world_mgr().world());
 
                     return;
                 }
@@ -159,7 +205,7 @@ impl Engine {
                         return;
                     }
 
-                    // TODO: Render here.
+                    render_system.run_now(&self.ctx.world_mgr().world());
 
                     return;
                 }
@@ -225,6 +271,7 @@ impl Engine {
                     }
 
                     self.ctx.gfx_ctx().resize(inner_size);
+                    self.ctx.render_mgr_mut().resize(inner_size);
 
                     return;
                 }
@@ -249,6 +296,7 @@ impl Engine {
                     }
 
                     self.ctx.gfx_ctx().resize(*new_inner_size);
+                    self.ctx.render_mgr_mut().resize(*new_inner_size);
 
                     return;
                 }
@@ -286,7 +334,10 @@ pub enum EngineInitError {
 }
 
 #[derive(Error, Debug)]
-pub enum EngineExecError {}
+pub enum EngineExecError {
+    #[error("gfx surface error: {0}")]
+    SurfaceError(#[from] wgpu::SurfaceError),
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EngineLoopMode {
