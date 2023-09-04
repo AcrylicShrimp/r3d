@@ -1,5 +1,5 @@
 use super::ObjectId;
-use crate::engine::math::Mat4;
+use crate::engine::{math::Mat4, transform::Transform};
 use bitvec::prelude::*;
 use specs::prelude::*;
 use std::{cmp::Ordering, ops::Range};
@@ -387,6 +387,32 @@ impl ObjectHierarchy {
         self.set_active(object, self.is_active_self(object));
     }
 
+    /// Updates the object matrices.
+    pub fn update_object_matrices<'a>(
+        &mut self,
+        transforms: impl Fn(Entity) -> Option<&'a Transform>,
+    ) {
+        for (&object, &entity) in self.objects.iter().zip(self.object_entities.iter()) {
+            if !self.is_dirty(object) {
+                continue;
+            }
+
+            let mut matrix = if let Some(transform) = transforms(entity) {
+                transform.matrix()
+            } else {
+                Mat4::identity()
+            };
+
+            if let Some(parent) = self.parent(object) {
+                matrix *= self.matrix(parent);
+            }
+
+            self.object_matrices[object.get() as usize] = matrix;
+        }
+
+        self.reset_dirties();
+    }
+
     /// Moves the given object and its children to the destination index.
     fn move_objects(&mut self, object: ObjectId, destination_index: usize) {
         let object = object.get() as usize;
@@ -492,9 +518,21 @@ impl Default for ObjectHierarchy {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::engine::math::Vec3;
+    use std::collections::HashMap;
 
     fn equals_float(a: f32, b: f32) -> bool {
         (a - b).abs() <= f32::EPSILON
+    }
+
+    fn equals_mat4(a: &Mat4, b: &Mat4) -> bool {
+        for i in 0..16 {
+            if !equals_float(a.elements[i], b.elements[i]) {
+                return false;
+            }
+        }
+
+        true
     }
 
     fn create_hierarchy(object_count: u32) -> ObjectHierarchy {
@@ -733,5 +771,67 @@ mod test {
         assert_eq!(hierarchy.is_active(ObjectId::from_u32(1)), false);
         assert_eq!(hierarchy.is_active(ObjectId::from_u32(2)), true);
         assert_eq!(hierarchy.is_active(ObjectId::from_u32(3)), true);
+    }
+
+    #[test]
+    fn check_hierarchy_object_matrix_update_uniform_scales() {
+        let mut hierarchy = create_hierarchy(4);
+
+        hierarchy.set_parent(ObjectId::from_u32(1), Some(ObjectId::from_u32(0)));
+        hierarchy.set_parent(ObjectId::from_u32(2), Some(ObjectId::from_u32(1)));
+        hierarchy.set_parent(ObjectId::from_u32(3), Some(ObjectId::from_u32(2)));
+
+        let mut transforms = HashMap::new();
+        transforms.insert(hierarchy.entity(ObjectId::from_u32(0)), {
+            let mut transform = Transform::new();
+            transform.scale = Vec3::new(0.5, 0.5, 0.5);
+            transform
+        });
+        transforms.insert(hierarchy.entity(ObjectId::from_u32(1)), {
+            let mut transform = Transform::new();
+            transform.scale = Vec3::new(0.5, 0.5, 0.5);
+            transform
+        });
+        transforms.insert(hierarchy.entity(ObjectId::from_u32(2)), {
+            let mut transform = Transform::new();
+            transform.scale = Vec3::new(0.5, 0.5, 0.5);
+            transform
+        });
+        transforms.insert(hierarchy.entity(ObjectId::from_u32(3)), {
+            let mut transform = Transform::new();
+            transform.scale = Vec3::new(0.5, 0.5, 0.5);
+            transform
+        });
+
+        hierarchy.update_object_matrices(|entity| transforms.get(&entity));
+
+        assert_eq!(
+            equals_mat4(
+                hierarchy.matrix(ObjectId::from_u32(0)),
+                &(Mat4::scale(Vec3::ONE * 0.5))
+            ),
+            true
+        );
+        assert_eq!(
+            equals_mat4(
+                hierarchy.matrix(ObjectId::from_u32(1)),
+                &(Mat4::scale(Vec3::ONE * 0.5 * 0.5))
+            ),
+            true
+        );
+        assert_eq!(
+            equals_mat4(
+                hierarchy.matrix(ObjectId::from_u32(2)),
+                &(Mat4::scale(Vec3::ONE * 0.5 * 0.5 * 0.5))
+            ),
+            true
+        );
+        assert_eq!(
+            equals_mat4(
+                hierarchy.matrix(ObjectId::from_u32(3)),
+                &(Mat4::scale(Vec3::ONE * 0.5 * 0.5 * 0.5 * 0.5))
+            ),
+            true
+        );
     }
 }
