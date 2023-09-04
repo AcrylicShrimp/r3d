@@ -23,23 +23,22 @@ impl Quat {
     };
 
     pub fn from_eular(x: f32, y: f32, z: f32) -> Self {
-        let cy = z.cos();
-        let sy = z.sin();
-        let cp = y.cos();
-        let sp = y.sin();
-        let cr = x.cos();
-        let sr = x.sin();
+        let half_x = x * 0.5;
+        let half_y = y * 0.5;
+        let half_z = z * 0.5;
 
-        let qw = cr * cp * cy + sr * sp * sy;
-        let qx = sr * cp * cy - cr * sp * sy;
-        let qy = cr * sp * cy + sr * cp * sy;
-        let qz = cr * cp * sy - sr * sp * cy;
+        let sin_x = half_x.sin();
+        let cos_x = half_x.cos();
+        let sin_y = half_y.sin();
+        let cos_y = half_y.cos();
+        let sin_z = half_z.sin();
+        let cos_z = half_z.cos();
 
         Self {
-            x: qx,
-            y: qy,
-            z: qz,
-            w: qw,
+            x: sin_x * cos_y * cos_z + cos_x * sin_y * sin_z,
+            y: cos_x * sin_y * cos_z - sin_x * cos_y * sin_z,
+            z: cos_x * cos_y * sin_z - sin_x * sin_y * cos_z,
+            w: cos_x * cos_y * cos_z + sin_x * sin_y * sin_z,
         }
     }
 
