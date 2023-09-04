@@ -193,6 +193,12 @@ impl Engine {
                     last_frame_time = now;
 
                     // TODO: Update here.
+                    {
+                        let mut world_mgr = self.ctx.world_mgr_mut();
+                        let (world, object_hierarchy) = world_mgr.split_mut();
+                        let transforms = world.read_component::<Transform>();
+                        object_hierarchy.update_object_matrices(|entity| transforms.get(entity));
+                    }
 
                     if window_occluded {
                         return;
