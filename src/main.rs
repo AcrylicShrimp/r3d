@@ -20,5 +20,6 @@ fn main() -> Result<(), Error> {
         height: 600,
     })
     .block_on()?
-    .run(EngineLoopMode::Poll, EngineTargetFps::VSync)
+    .run(EngineLoopMode::Poll, EngineTargetFps::VSync)?;
+    Ok(())
 }
