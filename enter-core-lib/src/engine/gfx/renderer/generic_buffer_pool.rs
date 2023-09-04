@@ -1,5 +1,5 @@
 use std::{cmp::Ordering, sync::Arc};
-use wgpu::{BufferAddress, BufferSize, Device};
+use wgpu::{Buffer, BufferAddress, BufferSize, BufferSlice, Device};
 
 /// Represents a buffer that can be used to allocate sub buffers from.
 pub trait GenericBuffer
@@ -34,6 +34,14 @@ impl<T> GenericBufferAllocation<T>
 where
     T: GenericBuffer,
 {
+    pub fn new(buffer: T, offset: BufferAddress, size: BufferSize) -> Self {
+        Self {
+            buffer: buffer.into(),
+            offset,
+            size,
+        }
+    }
+
     pub fn buffer(&self) -> &Arc<T> {
         &self.buffer
     }
@@ -98,6 +106,23 @@ where
 
     pub fn is_empty(&self) -> bool {
         self.size == BufferSize::MAX
+    }
+}
+
+impl GenericBufferAllocation<Buffer> {
+    pub fn as_slice<'a>(&'a self) -> BufferSlice<'a> {
+        self.buffer
+            .slice(self.offset..self.offset + self.size.get())
+    }
+}
+
+impl Clone for GenericBufferAllocation<Buffer> {
+    fn clone(&self) -> Self {
+        Self {
+            buffer: self.buffer.clone(),
+            offset: self.offset,
+            size: self.size,
+        }
     }
 }
 
