@@ -76,7 +76,7 @@ impl PipelineProvider {
         } else {
             return None;
         };
-        let buffer_layouts =
+        let mut buffer_layouts =
             Vec::from_iter(self.buffer_layouts.iter().map(|layout| BufferLayout {
                 array_stride: layout.array_stride,
                 step_mode: VertexStepMode::Vertex,
@@ -106,6 +106,21 @@ impl PipelineProvider {
                     })
                 })),
             }));
+        let per_instance_attributes = Vec::from_iter(
+            material
+                .shader
+                .reflected_shader
+                .per_instance_input
+                .elements
+                .iter()
+                .map(|element| element.attribute.clone()),
+        );
+
+        buffer_layouts.push(BufferLayout {
+            array_stride: material.shader.reflected_shader.per_instance_input.stride,
+            step_mode: VertexStepMode::Instance,
+            attributes: per_instance_attributes,
+        });
 
         let pipeline = pipeline_cache.create_pipeline(
             shader_mgr,
