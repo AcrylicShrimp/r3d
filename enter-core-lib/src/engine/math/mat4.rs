@@ -3,8 +3,10 @@ use std::{
     fmt::Display,
     ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+use zerocopy::AsBytes;
 
-#[derive(Debug, Clone, PartialEq)]
+#[repr(C)]
+#[derive(AsBytes, Debug, Clone, PartialEq)]
 pub struct Mat4 {
     pub elements: [f32; 16],
 }
@@ -38,6 +40,75 @@ impl Mat4 {
             0.0, 1.0, 0.0, 0.0, //
             0.0, 0.0, 1.0, 0.0, //
             0.0, 0.0, 0.0, 1.0, //
+        ])
+    }
+
+    pub fn orthographic(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Self {
+        Self::new([
+            2.0 / (right - left),
+            0.0,
+            0.0,
+            0.0, //
+            0.0,
+            2.0 / (top - bottom),
+            0.0,
+            0.0, //
+            0.0,
+            0.0,
+            1.0 / (far - near),
+            0.0, //
+            (left + right) / (left - right),
+            (bottom + top) / (bottom - top),
+            near / (near - far),
+            1.0, //
+        ])
+    }
+
+    pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Self {
+        let f = (fov * 0.5).tan().recip();
+
+        Self::new([
+            f / aspect,
+            0.0,
+            0.0,
+            0.0, //
+            0.0,
+            f,
+            0.0,
+            0.0, //
+            0.0,
+            0.0,
+            (far + near) / (near - far),
+            -1.0, //
+            0.0,
+            0.0,
+            (2.0 * far * near) / (near - far),
+            0.0, //
+        ])
+    }
+
+    pub fn look_at(eye: Vec3, target: Vec3, up: Vec3) -> Self {
+        let z = (eye - target).normalized();
+        let x = Vec3::cross(z, up).normalized();
+        let y = Vec3::cross(z, x).normalized();
+
+        Self::new([
+            x.x,
+            y.x,
+            z.x,
+            0.0, //
+            x.y,
+            y.y,
+            z.y,
+            0.0, //
+            x.z,
+            y.z,
+            z.z,
+            0.0, //
+            Vec3::dot(-x, eye),
+            Vec3::dot(-y, eye),
+            Vec3::dot(-z, eye),
+            1.0, //
         ])
     }
 
