@@ -5,6 +5,7 @@ mod device_buffer;
 mod frame_buffer_allocator;
 mod generic_buffer_pool;
 mod host_buffer;
+mod pipeline_provider;
 mod renderer;
 mod renderer_impls;
 
@@ -12,6 +13,7 @@ pub use device_buffer::*;
 pub use frame_buffer_allocator::*;
 pub use generic_buffer_pool::*;
 pub use host_buffer::*;
+pub use pipeline_provider::*;
 pub use renderer::*;
 
 pub struct RenderingCommand<'r> {
