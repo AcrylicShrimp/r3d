@@ -1,4 +1,4 @@
-use super::Vec3;
+use super::{Mat4, Vec3};
 use std::{
     fmt::Display,
     ops::{Mul, MulAssign, Neg},
@@ -52,6 +52,49 @@ impl Quat {
             z: axis.z * s,
             w: half_angle.cos(),
         }
+    }
+
+    pub fn from_mat4(mat: &Mat4) -> Self {
+        let elements = &mat.elements;
+        let trace = elements[0] + elements[5] + elements[10];
+        let quat = if 0.0 < trace {
+            let s = (trace + 1.0).sqrt() * 2.0;
+            let inv_s = s.recip();
+            Self {
+                x: (elements[6] - elements[9]) * inv_s,
+                y: (elements[8] - elements[2]) * inv_s,
+                z: (elements[1] - elements[4]) * inv_s,
+                w: 0.25 * s,
+            }
+        } else if elements[0] > elements[5] && elements[0] > elements[10] {
+            let s = (1.0 + elements[0] - elements[5] - elements[10]).sqrt() * 2.0;
+            let inv_s = s.recip();
+            Self {
+                x: 0.25 * s,
+                y: (elements[4] + elements[1]) * inv_s,
+                z: (elements[2] + elements[8]) * inv_s,
+                w: (elements[6] - elements[9]) * inv_s,
+            }
+        } else if elements[5] > elements[10] {
+            let s = (1.0 + elements[5] - elements[0] - elements[10]).sqrt() * 2.0;
+            let inv_s = s.recip();
+            Self {
+                x: (elements[4] + elements[1]) * inv_s,
+                y: 0.25 * s,
+                z: (elements[9] + elements[6]) * inv_s,
+                w: (elements[8] - elements[2]) * inv_s,
+            }
+        } else {
+            let s = (1.0 + elements[10] - elements[0] - elements[5]).sqrt() * 2.0;
+            let inv_s = s.recip();
+            Self {
+                x: (elements[2] + elements[8]) * inv_s,
+                y: (elements[9] + elements[6]) * inv_s,
+                z: 0.25 * s,
+                w: (elements[1] - elements[4]) * inv_s,
+            }
+        };
+        quat.normalized()
     }
 
     pub fn normalize(&mut self) -> &mut Self {
@@ -113,6 +156,43 @@ impl Quat {
         let yaw = siny_cosp.atan2(cosy_cosp);
 
         Vec3::new(roll, pitch, yaw)
+    }
+
+    pub fn into_mat4(self) -> Mat4 {
+        let x2 = self.x + self.x;
+        let y2 = self.y + self.y;
+        let z2 = self.z + self.z;
+
+        let xx = self.x * x2;
+        let xy = self.x * y2;
+        let xz = self.x * z2;
+
+        let yy = self.y * y2;
+        let yz = self.y * z2;
+        let zz = self.z * z2;
+
+        let wx = self.w * x2;
+        let wy = self.w * y2;
+        let wz = self.w * z2;
+
+        Mat4::new([
+            1.0 - (yy + zz),
+            xy + wz,
+            xz - wy,
+            0.0,
+            xy - wz,
+            1.0 - (xx + zz),
+            yz + wx,
+            0.0,
+            xz + wy,
+            yz - wx,
+            1.0 - (xx + yy),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+        ])
     }
 }
 
