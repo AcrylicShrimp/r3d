@@ -29,7 +29,7 @@ pub mod semantic_bindings {
             ty: BufferBindingType::Uniform,
             has_dynamic_offset: false,
             min_binding_size: Some(unsafe {
-                NonZeroU64::new_unchecked(size_of::<[f32; (3 + 1) * 3]>() as u64)
+                NonZeroU64::new_unchecked(size_of::<[f32; 4 * 4]>() as u64)
             }),
         },
         count: None,
@@ -63,10 +63,17 @@ pub mod semantic_inputs {
     pub const POSITION: SemanticShaderInput = SemanticShaderInput {
         key: KEY_POSITION,
         name: "position",
-        format: VertexFormat::Float32x2,
+        format: VertexFormat::Float32x3,
         step_mode: VertexStepMode::Vertex,
     };
-    pub const KEY_UV: SemanticShaderInputKey = SemanticShaderInputKey::new(2);
+    pub const KEY_NORMAL: SemanticShaderInputKey = SemanticShaderInputKey::new(2);
+    pub const NORMAL: SemanticShaderInput = SemanticShaderInput {
+        key: KEY_NORMAL,
+        name: "normal",
+        format: VertexFormat::Float32x3,
+        step_mode: VertexStepMode::Vertex,
+    };
+    pub const KEY_UV: SemanticShaderInputKey = SemanticShaderInputKey::new(3);
     pub const UV: SemanticShaderInput = SemanticShaderInput {
         key: KEY_UV,
         name: "uv",
@@ -78,21 +85,28 @@ pub mod semantic_inputs {
     pub const TRANSFORM_ROW_0: SemanticShaderInput = SemanticShaderInput {
         key: KEY_TRANSFORM_ROW_0,
         name: "transform_row_0",
-        format: VertexFormat::Float32x3,
+        format: VertexFormat::Float32x4,
         step_mode: VertexStepMode::Instance,
     };
     pub const KEY_TRANSFORM_ROW_1: SemanticShaderInputKey = SemanticShaderInputKey::new(102);
     pub const TRANSFORM_ROW_1: SemanticShaderInput = SemanticShaderInput {
         key: KEY_TRANSFORM_ROW_1,
         name: "transform_row_1",
-        format: VertexFormat::Float32x3,
+        format: VertexFormat::Float32x4,
         step_mode: VertexStepMode::Instance,
     };
     pub const KEY_TRANSFORM_ROW_2: SemanticShaderInputKey = SemanticShaderInputKey::new(103);
     pub const TRANSFORM_ROW_2: SemanticShaderInput = SemanticShaderInput {
         key: KEY_TRANSFORM_ROW_2,
         name: "transform_row_2",
-        format: VertexFormat::Float32x3,
+        format: VertexFormat::Float32x4,
+        step_mode: VertexStepMode::Instance,
+    };
+    pub const KEY_TRANSFORM_ROW_3: SemanticShaderInputKey = SemanticShaderInputKey::new(104);
+    pub const TRANSFORM_ROW_3: SemanticShaderInput = SemanticShaderInput {
+        key: KEY_TRANSFORM_ROW_3,
+        name: "transform_row_3",
+        format: VertexFormat::Float32x4,
         step_mode: VertexStepMode::Instance,
     };
 
@@ -121,7 +135,7 @@ pub mod semantic_outputs {
         key: KEY_COLOR,
         name: "color",
         target: ColorTargetState {
-            format: TextureFormat::Bgra8UnormSrgb,
+            format: TextureFormat::Bgra8Unorm,
             blend: Some(BlendState::ALPHA_BLENDING),
             write_mask: ColorWrites::ALL,
         },
@@ -221,10 +235,12 @@ impl ShaderManager {
         this.register_binding(semantic_bindings::SPRITE_SAMPLER);
 
         this.register_input(semantic_inputs::POSITION);
+        this.register_input(semantic_inputs::NORMAL);
         this.register_input(semantic_inputs::UV);
         this.register_input(semantic_inputs::TRANSFORM_ROW_0);
         this.register_input(semantic_inputs::TRANSFORM_ROW_1);
         this.register_input(semantic_inputs::TRANSFORM_ROW_2);
+        this.register_input(semantic_inputs::TRANSFORM_ROW_3);
         this.register_input(semantic_inputs::SPRITE_SIZE);
         this.register_input(semantic_inputs::SPRITE_COLOR);
 
