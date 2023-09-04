@@ -4,8 +4,8 @@ use super::{
 };
 use naga::{
     front::wgsl::{parse_str, ParseError},
-    AddressSpace, ArraySize, Binding, ConstantInner, Function, ImageClass, ImageDimension, Module,
-    ScalarKind, ScalarValue, ShaderStage, StructMember, Type, TypeInner, VectorSize,
+    AddressSpace, ArraySize, Binding, Function, ImageClass, ImageDimension, Module, ScalarKind,
+    ShaderStage, StructMember, Type, TypeInner, VectorSize,
 };
 use std::num::{NonZeroU32, NonZeroU64};
 use thiserror::Error;
@@ -459,33 +459,12 @@ fn shader_ty_to_binding_element_kind(
         (size + alignment - 1) / alignment * alignment
     }
 
-    fn parse_array_size(module: &Module, size: ArraySize) -> Option<u32> {
+    fn parse_array_size(size: ArraySize) -> Option<u32> {
         let size = match size {
             ArraySize::Constant(constant) => constant,
             _ => return None,
         };
-        let size = match &module.constants[size].inner {
-            ConstantInner::Scalar { value, .. } => *value,
-            _ => return None,
-        };
-        let size = match size {
-            ScalarValue::Sint(i) => {
-                if i <= 0 {
-                    return None;
-                } else {
-                    i as u32
-                }
-            }
-            ScalarValue::Uint(i) => {
-                if i == 0 {
-                    return None;
-                } else {
-                    i as u32
-                }
-            }
-            _ => return None,
-        };
-        Some(size)
+        Some(size.get())
     }
 
     match &ty.inner {
@@ -509,7 +488,7 @@ fn shader_ty_to_binding_element_kind(
             },
         }),
         TypeInner::Array { size, stride, .. } => {
-            let size = if let Some(size) = parse_array_size(module, *size) {
+            let size = if let Some(size) = parse_array_size(*size) {
                 size
             } else {
                 return None;
@@ -588,7 +567,7 @@ fn shader_ty_to_binding_element_kind(
                         return None;
                     }
 
-                    let size = if let Some(size) = parse_array_size(module, *size) {
+                    let size = if let Some(size) = parse_array_size(*size) {
                         size
                     } else {
                         return None;
