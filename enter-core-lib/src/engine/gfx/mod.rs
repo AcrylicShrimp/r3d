@@ -10,6 +10,7 @@ use wgpu::{
 use winit::{dpi::PhysicalSize, window::Window};
 
 mod color;
+mod depth_stencil;
 mod material;
 mod render_mgr;
 mod renderer;
@@ -19,6 +20,7 @@ mod sprite_texel_mapping;
 mod texture;
 
 pub use color::*;
+pub use depth_stencil::*;
 pub use material::*;
 pub use render_mgr::*;
 pub use renderer::*;
