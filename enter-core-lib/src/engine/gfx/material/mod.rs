@@ -7,9 +7,15 @@ use wgpu::{
 };
 use zerocopy::AsBytes;
 
+mod bind_group_layout_cache;
+mod pipeline_cache;
+mod pipeline_layout_cache;
 mod shader;
 mod shader_reflection;
 
+pub use bind_group_layout_cache::*;
+pub use pipeline_cache::*;
+pub use pipeline_layout_cache::*;
 pub use shader::*;
 pub use shader_reflection::*;
 
