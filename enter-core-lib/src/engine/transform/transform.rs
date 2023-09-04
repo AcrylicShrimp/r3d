@@ -1,7 +1,7 @@
 use crate::engine::math::{Mat4, Quat, Vec3};
 use specs::{prelude::*, Component};
 
-#[derive(Default, Debug, Clone, Component)]
+#[derive(Debug, Clone, Component)]
 #[storage(VecStorage)]
 pub struct Transform {
     pub position: Vec3,
@@ -20,5 +20,15 @@ impl Transform {
 
     pub fn inverse_matrix(&self) -> Mat4 {
         Mat4::trs(-self.position, -self.rotation, Vec3::recip(self.scale))
+    }
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Self {
+            position: Default::default(),
+            rotation: Default::default(),
+            scale: Vec3::ONE,
+        }
     }
 }
