@@ -1,4 +1,4 @@
-use super::{inspect_shader, ShaderInspectionError};
+use super::{inspect_shader, BindGroupLayoutCache, CachedBindGroupLayout, ShaderInspectionError};
 use crate::engine::gfx::{GfxContextHandle, ReflectedShader};
 use codegen::Handle;
 use std::{
@@ -7,11 +7,8 @@ use std::{
     num::NonZeroU32,
 };
 use wgpu::{
-    BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType,
-    ColorTargetState, FragmentState, FrontFace, MultisampleState, PipelineLayoutDescriptor,
-    PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor,
-    ShaderModule, ShaderModuleDescriptor, ShaderSource, VertexBufferLayout, VertexFormat,
-    VertexState, VertexStepMode,
+    BindGroupLayoutEntry, BindingType, ColorTargetState, ShaderModule, ShaderModuleDescriptor,
+    ShaderSource, VertexFormat, VertexStepMode,
 };
 
 pub mod semantic_bindings {
@@ -194,17 +191,10 @@ pub struct SemanticShaderOutput {
     pub location: u32,
 }
 
-#[derive(Debug)]
-pub struct ShaderBindGroupLayout {
-    pub layout: BindGroupLayout,
-    pub entries: Vec<BindGroupLayoutEntry>,
-}
-
 #[derive(Handle)]
 pub struct Shader {
     pub shader_module: ShaderModule,
-    pub render_pipeline: RenderPipeline,
-    pub bind_group_layouts: HashMap<u32, ShaderBindGroupLayout>,
+    pub bind_group_layouts: HashMap<u32, CachedBindGroupLayout>,
     pub reflected_shader: ReflectedShader,
 }
 
@@ -296,11 +286,12 @@ impl ShaderManager {
 
     pub fn create_shader(
         &self,
+        bind_group_layout_cache: &mut BindGroupLayoutCache,
         source: impl AsRef<str>,
     ) -> Result<ShaderHandle, ShaderInspectionError> {
         let (reflected_shader, shader_module) = self.compile_shader(source)?;
 
-        Ok(self.build_shader(shader_module, reflected_shader))
+        Ok(self.build_shader(bind_group_layout_cache, shader_module, reflected_shader))
     }
 
     fn compile_shader(
@@ -322,6 +313,7 @@ impl ShaderManager {
 
     fn build_shader(
         &self,
+        bind_group_layout_cache: &mut BindGroupLayoutCache,
         shader_module: ShaderModule,
         reflected_shader: ReflectedShader,
     ) -> ShaderHandle {
@@ -344,43 +336,17 @@ impl ShaderManager {
         let bind_group_layouts = (0..=max_group)
             .map(|group| {
                 let entries = bind_group_layout_entries
-                    .get(&group)
-                    .map(|bind_group| &bind_group[..])
-                    .unwrap_or(&[]);
-
-                self.gfx_ctx
-                    .device
-                    .create_bind_group_layout(&BindGroupLayoutDescriptor {
-                        label: None,
-                        entries,
-                    })
+                    .remove(&group)
+                    .unwrap_or_else(|| Vec::new());
+                bind_group_layout_cache.create_layout(entries)
             })
             .collect::<Vec<_>>();
-        let bind_group_layouts_refs = bind_group_layouts.iter().collect::<Vec<_>>();
-        let pipeline_layout =
-            self.gfx_ctx
-                .device
-                .create_pipeline_layout(&PipelineLayoutDescriptor {
-                    label: None,
-                    bind_group_layouts: &bind_group_layouts_refs,
-                    push_constant_ranges: &[],
-                });
-        let bind_group_layouts =
-            HashMap::from_iter(bind_group_layouts.into_iter().enumerate().map(
-                |(group, layout)| {
-                    let entries = bind_group_layout_entries
-                        .remove(&(group as u32))
-                        .unwrap_or_else(|| Vec::new());
-                    (group as u32, ShaderBindGroupLayout { layout, entries })
-                },
-            ));
-
-        let per_vertex_input_buffer_layout_builder = reflected_shader
-            .per_vertex_input
-            .vertex_buffer_layout_builder();
-        let per_instance_input_buffer_layout_builder = reflected_shader
-            .per_instance_input
-            .vertex_buffer_layout_builder();
+        let bind_group_layouts = HashMap::from_iter(
+            bind_group_layouts
+                .into_iter()
+                .enumerate()
+                .map(|(group, layout)| (group as u32, layout)),
+        );
 
         let max_target_location = reflected_shader
             .outputs
@@ -398,43 +364,8 @@ impl ShaderManager {
             targets[output.location as usize] = target;
         }
 
-        let render_pipeline =
-            self.gfx_ctx
-                .device
-                .create_render_pipeline(&RenderPipelineDescriptor {
-                    label: None,
-                    layout: Some(&pipeline_layout),
-                    vertex: VertexState {
-                        module: &shader_module,
-                        entry_point: &reflected_shader.vertex_entry_point_name,
-                        buffers: &[
-                            VertexBufferLayout::from(&per_vertex_input_buffer_layout_builder),
-                            VertexBufferLayout::from(&per_instance_input_buffer_layout_builder),
-                        ],
-                    },
-                    // TODO: Let materials specify the topology and other settings.
-                    primitive: PrimitiveState {
-                        topology: PrimitiveTopology::TriangleStrip,
-                        strip_index_format: None,
-                        front_face: FrontFace::Ccw,
-                        cull_mode: None,
-                        unclipped_depth: false,
-                        polygon_mode: PolygonMode::Fill,
-                        conservative: false,
-                    },
-                    depth_stencil: None,
-                    multisample: MultisampleState::default(),
-                    fragment: Some(FragmentState {
-                        module: &shader_module,
-                        entry_point: &reflected_shader.fragment_entry_point_name,
-                        targets: &targets,
-                    }),
-                    multiview: None,
-                });
-
         ShaderHandle::new(Shader {
             shader_module,
-            render_pipeline,
             reflected_shader,
             bind_group_layouts,
         })
