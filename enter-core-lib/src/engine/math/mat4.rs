@@ -90,7 +90,7 @@ impl Mat4 {
     pub fn look_at(eye: Vec3, target: Vec3, up: Vec3) -> Self {
         let z = (eye - target).normalized();
         let x = Vec3::cross(z, up).normalized();
-        let y = Vec3::cross(z, x).normalized();
+        let y = Vec3::cross(x, z).normalized();
 
         Self::new([
             x.x,
