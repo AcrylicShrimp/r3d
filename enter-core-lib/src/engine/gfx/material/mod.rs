@@ -1,9 +1,10 @@
-use crate::engine::gfx::GfxContextHandle;
+use codegen::Handle;
 use half::f16;
 use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 use wgpu::{
     BindGroup, BindGroupDescriptor, BindGroupEntry, BindingResource, BindingType, Buffer,
-    BufferAddress, BufferBinding, BufferSize, Sampler, TextureView, VertexFormat, VertexStepMode,
+    BufferAddress, BufferBinding, BufferSize, Device, Sampler, TextureView, VertexFormat,
+    VertexStepMode,
 };
 use zerocopy::AsBytes;
 
@@ -19,8 +20,10 @@ pub use pipeline_layout_cache::*;
 pub use shader::*;
 pub use shader_reflection::*;
 
+#[derive(Handle)]
 pub struct Material {
     pub shader: ShaderHandle,
+    pub pipeline_layout: CachedPipelineLayout,
     pub semantic_inputs: HashMap<SemanticShaderInputKey, SemanticInputData>,
     pub bind_properties: HashMap<BindingPropKey, BindGroupIndex>,
     pub bind_group_holders: Vec<BindGroupHolder>,
@@ -28,7 +31,7 @@ pub struct Material {
 }
 
 impl Material {
-    pub fn new(shader: ShaderHandle) -> Self {
+    pub fn new(shader: ShaderHandle, pipeline_layout_cache: &mut PipelineLayoutCache) -> Self {
         let semantic_inputs = HashMap::from_iter(
             shader
                 .reflected_shader
@@ -43,6 +46,7 @@ impl Material {
                             SemanticInputData {
                                 step_mode: VertexStepMode::Instance,
                                 offset: input.attribute.offset,
+                                shader_location: input.attribute.shader_location,
                                 index,
                             },
                         )
@@ -62,6 +66,7 @@ impl Material {
                                     SemanticInputData {
                                         step_mode: VertexStepMode::Vertex,
                                         offset: input.attribute.offset,
+                                        shader_location: input.attribute.shader_location,
                                         index,
                                     },
                                 )
@@ -76,6 +81,7 @@ impl Material {
                 .enumerate()
                 .flat_map(|(group_index, (group, layout))| {
                     layout
+                        .key()
                         .entries
                         .iter()
                         .enumerate()
@@ -109,7 +115,7 @@ impl Material {
                     is_dirty: false,
                     group: *group,
                     bind_group: None,
-                    entries: Vec::from_iter(layout.entries.iter().map(|entry| {
+                    entries: Vec::from_iter(layout.key().entries.iter().map(|entry| {
                         BindGroupEntryHolder {
                             binding: entry.binding,
                             binding_ty: entry.ty,
@@ -137,8 +143,21 @@ impl Material {
                 }),
         );
 
+        let mut bind_group_layouts = Vec::from_iter(
+            shader
+                .bind_group_layouts
+                .iter()
+                .map(|(group, layout)| (*group, layout.clone())),
+        );
+        bind_group_layouts.sort_unstable_by_key(|(group, _)| *group);
+
+        let bind_group_layouts =
+            Vec::from_iter(bind_group_layouts.into_iter().map(|(_, layout)| layout));
+        let pipeline_layout = pipeline_layout_cache.create_layout(bind_group_layouts);
+
         Self {
             shader,
+            pipeline_layout,
             semantic_inputs,
             bind_properties,
             bind_group_holders,
@@ -148,10 +167,10 @@ impl Material {
 
     pub fn set_bind_property(
         &mut self,
-        key: impl AsRef<BindingPropKey>,
+        key: &BindingPropKey,
         resource: impl Into<BindGroupEntryResource>,
     ) -> bool {
-        let index = if let Some(index) = self.bind_properties.get(key.as_ref()) {
+        let index = if let Some(index) = self.bind_properties.get(key) {
             *index
         } else {
             return false;
@@ -248,6 +267,7 @@ pub enum BindingPropKey {
 pub struct SemanticInputData {
     pub step_mode: VertexStepMode,
     pub offset: BufferAddress,
+    pub shader_location: u32,
     pub index: usize,
 }
 

@@ -1,5 +1,5 @@
-use crate::engine::gfx::Material;
-use wgpu::{Buffer, BufferAddress, RenderPass, VertexStepMode};
+use super::{CachedPipeline, MaterialHandle, PipelineCache, ShaderManager};
+use wgpu::{Buffer, RenderPass, VertexStepMode};
 
 mod device_buffer;
 mod frame_buffer_allocator;
@@ -15,149 +15,96 @@ pub use generic_buffer_pool::*;
 pub use host_buffer::*;
 pub use pipeline_provider::*;
 pub use renderer::*;
+pub use renderer_impls::*;
 
-pub struct RenderingCommand<'r> {
+pub struct RenderingCommand {
+    pub pipeline: CachedPipeline,
+    pub material: MaterialHandle,
     pub vertex_count: u32,
-    pub instance_count: u32,
-    pub render_pass: RenderPass<'r>,
     pub per_instance_buffer: Option<GenericBufferAllocation<Buffer>>,
-    pub per_vertex_buffer: Option<GenericBufferAllocation<Buffer>>,
+    pub per_vertex_buffers: Vec<GenericBufferAllocation<Buffer>>,
 }
 
-impl<'r> RenderingCommand<'r> {
-    pub fn render(&'r mut self) {
-        if let Some(buffer) = &self.per_vertex_buffer {
-            self.render_pass.set_vertex_buffer(
-                0,
-                buffer
-                    .buffer()
-                    .slice(buffer.offset()..buffer.offset() + buffer.size().get()),
-            );
+impl RenderingCommand {
+    pub fn render<'r, 'c: 'r>(&'c self, render_pass: &mut RenderPass<'r>) {
+        render_pass.set_pipeline(self.pipeline.as_ref());
+
+        for bind_group_index in self.material.bind_properties.values() {
+            let bind_group_holder = &self.material.bind_group_holders[bind_group_index.group_index];
+
+            if let Some(bind_group) = bind_group_holder.bind_group.as_ref() {
+                render_pass.set_bind_group(bind_group_holder.group, bind_group, &[]);
+            }
+        }
+
+        for (index, buffer) in self.per_vertex_buffers.iter().enumerate() {
+            render_pass.set_vertex_buffer(index as u32, buffer.as_slice());
         }
 
         if let Some(buffer) = &self.per_instance_buffer {
-            self.render_pass.set_vertex_buffer(
-                1,
-                buffer
-                    .buffer()
-                    .slice(buffer.offset()..buffer.offset() + buffer.size().get()),
-            );
+            render_pass.set_vertex_buffer(self.per_vertex_buffers.len() as u32, buffer.as_slice());
         }
 
-        self.render_pass
-            .draw(0..self.vertex_count, 0..self.instance_count);
+        render_pass.draw(0..self.vertex_count, 0..1);
     }
 }
 
-pub fn render_with<'r, T>(
-    mut render_pass: RenderPass<'r>,
-    material: &'r Material,
-    renderer: &'r mut dyn Renderer<RenderData = T>,
-    render_data: impl Iterator<Item = &'r T> + Clone,
-    frame_buffer_allocator: &'r mut FrameBufferAllocator,
-) -> RenderingCommand<'r> {
-    let render_data_count = render_data.clone().count();
+pub fn build_rendering_command(
+    renderer: &mut dyn Renderer,
+    shader_mgr: &ShaderManager,
+    pipeline_cache: &mut PipelineCache,
+    frame_buffer_allocator: &mut FrameBufferAllocator,
+) -> Option<RenderingCommand> {
+    let pipeline_provider = renderer.pipeline_provider();
 
-    if render_data_count == 0 {
-        return RenderingCommand {
-            vertex_count: 0,
-            instance_count: 0,
-            render_pass,
-            per_instance_buffer: None,
-            per_vertex_buffer: None,
+    let pipeline =
+        if let Some(pipeline) = pipeline_provider.obtain_pipeline(shader_mgr, pipeline_cache) {
+            pipeline
+        } else {
+            return None;
         };
-    }
+    let material = if let Some(material) = pipeline_provider.material() {
+        material
+    } else {
+        return None;
+    };
 
-    let vertex_count = renderer.vertex_count();
-    let per_instance_buffer = frame_buffer_allocator.alloc_staging_buffer(
-        material.shader.reflected_shader.per_instance_input.stride
-            * render_data_count as BufferAddress,
-    );
-    let per_vertex_buffer = frame_buffer_allocator.alloc_staging_buffer(
-        material.shader.reflected_shader.per_vertex_input.stride
-            * vertex_count as BufferAddress
-            * render_data_count as BufferAddress,
-    );
+    let per_instance_buffer = frame_buffer_allocator
+        .alloc_staging_buffer(material.shader.reflected_shader.per_instance_input.stride);
 
-    for (index, render_data) in render_data.enumerate() {
-        let per_instance = per_instance_buffer.slice(
-            material.shader.reflected_shader.per_instance_input.stride * index as BufferAddress,
-            material.shader.reflected_shader.per_instance_input.stride,
-        );
-        let per_vertex = per_vertex_buffer.slice(
-            material.shader.reflected_shader.per_vertex_input.stride
-                * vertex_count as BufferAddress
-                * index as BufferAddress,
-            material.shader.reflected_shader.per_vertex_input.stride
-                * vertex_count as BufferAddress,
-        );
+    for (key, input_data) in &material.semantic_inputs {
+        match input_data.step_mode {
+            VertexStepMode::Vertex => {}
+            VertexStepMode::Instance => {
+                let size = material.shader.reflected_shader.per_instance_input.elements
+                    [input_data.index]
+                    .attribute
+                    .format
+                    .size();
 
-        for (key, input_data) in &material.semantic_inputs {
-            match input_data.step_mode {
-                VertexStepMode::Vertex => {
-                    let size = material.shader.reflected_shader.per_vertex_input.elements
-                        [input_data.index]
-                        .attribute
-                        .format
-                        .size();
-
-                    for vertex_index in 0..vertex_count {
-                        renderer.copy_semantic_per_vertex_input(
-                            *key,
-                            render_data,
-                            vertex_index,
-                            &mut per_vertex.slice(
-                                input_data.offset
-                                    + material.shader.reflected_shader.per_vertex_input.stride
-                                        * vertex_index as BufferAddress,
-                                size,
-                            ),
-                        );
-                    }
-                }
-                VertexStepMode::Instance => {
-                    let size = material.shader.reflected_shader.per_instance_input.elements
-                        [input_data.index]
-                        .attribute
-                        .format
-                        .size();
-
-                    renderer.copy_semantic_per_instance_input(
-                        *key,
-                        render_data,
-                        &mut per_instance.slice(input_data.offset, size),
-                    );
-                }
-            }
-        }
-
-        for property in material.per_instance_properties.values() {
-            if let Some(value) = &property.value {
-                per_instance
-                    .slice(property.offset, value.to_vertex_format().size())
-                    .copy_from_slice(value.as_bytes());
+                renderer.copy_semantic_per_instance_input(
+                    *key,
+                    &mut per_instance_buffer.slice(input_data.offset, size),
+                );
             }
         }
     }
 
-    render_pass.set_pipeline(&material.shader.render_pipeline);
-
-    for bind_group_index in material.bind_properties.values() {
-        let bind_group_holder = &material.bind_group_holders[bind_group_index.group_index];
-
-        if let Some(bind_group) = bind_group_holder.bind_group.as_ref() {
-            render_pass.set_bind_group(bind_group_holder.group, bind_group, &[]);
+    for property in material.per_instance_properties.values() {
+        if let Some(value) = &property.value {
+            per_instance_buffer
+                .slice(property.offset, value.to_vertex_format().size())
+                .copy_from_slice(value.as_bytes());
         }
     }
 
-    let per_vertex_buffer = frame_buffer_allocator.commit_staging_buffer(per_vertex_buffer);
     let per_instance_buffer = frame_buffer_allocator.commit_staging_buffer(per_instance_buffer);
 
-    RenderingCommand {
-        vertex_count,
-        instance_count: render_data_count as u32,
-        render_pass,
+    Some(RenderingCommand {
+        pipeline,
+        material,
+        vertex_count: renderer.vertex_count(),
         per_instance_buffer,
-        per_vertex_buffer,
-    }
+        per_vertex_buffers: renderer.vertex_buffers(),
+    })
 }
