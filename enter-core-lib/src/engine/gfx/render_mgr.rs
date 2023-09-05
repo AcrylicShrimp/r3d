@@ -1,5 +1,5 @@
 use super::{
-    build_rendering_command, BindGroupLayoutCache, DepthStencil, DepthStencilMode,
+    build_rendering_command, BindGroupLayoutCache, CameraClearMode, DepthStencil, DepthStencilMode,
     FrameBufferAllocator, GfxContextHandle, PipelineCache, PipelineLayoutCache, Renderer,
     RenderingCommand, ShaderManager,
 };
@@ -67,9 +67,7 @@ impl RenderManager {
         &'e self,
         encoder: &'e mut CommandEncoder,
         surface_texture_view: &'e TextureView,
-        clear_color: Color,
-        clear_depth: f32,
-        clear_stencil: u32,
+        clear_mode: &CameraClearMode,
     ) -> Result<RenderPass<'e>, SurfaceError> {
         let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
@@ -77,7 +75,16 @@ impl RenderManager {
                 view: &surface_texture_view,
                 resolve_target: None,
                 ops: Operations {
-                    load: LoadOp::Clear(clear_color),
+                    load: match clear_mode {
+                        CameraClearMode::Keep => LoadOp::Load,
+                        CameraClearMode::All { color, .. } => LoadOp::Clear(Color {
+                            r: color.r as f64,
+                            g: color.g as f64,
+                            b: color.b as f64,
+                            a: color.a as f64,
+                        }),
+                        CameraClearMode::DepthOnly { .. } => LoadOp::Load,
+                    },
                     store: true,
                 },
             })],
@@ -85,11 +92,19 @@ impl RenderManager {
                 RenderPassDepthStencilAttachment {
                     view,
                     depth_ops: Some(Operations {
-                        load: LoadOp::Clear(clear_depth),
+                        load: match clear_mode {
+                            CameraClearMode::Keep => LoadOp::Load,
+                            CameraClearMode::All { depth, .. } => LoadOp::Clear(*depth),
+                            CameraClearMode::DepthOnly { depth, .. } => LoadOp::Clear(*depth),
+                        },
                         store: true,
                     }),
                     stencil_ops: Some(Operations {
-                        load: LoadOp::Clear(clear_stencil),
+                        load: match clear_mode {
+                            CameraClearMode::Keep => LoadOp::Load,
+                            CameraClearMode::All { stencil, .. } => LoadOp::Clear(*stencil),
+                            CameraClearMode::DepthOnly { stencil, .. } => LoadOp::Clear(*stencil),
+                        },
                         store: true,
                     }),
                 }
