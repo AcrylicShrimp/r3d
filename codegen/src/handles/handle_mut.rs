@@ -12,19 +12,19 @@ pub fn handle_mut(item: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         #[derive(Clone)]
         pub struct #handle_name #generics #where_clause {
-            inner: std::sync::Arc<parking_lot::Mutex<#ty_name #ty_generics>>,
+            inner: std::sync::Arc<parking_lot::RwLock<#ty_name #ty_generics>>,
         }
 
         impl #impl_generics #handle_name #ty_generics #where_clause {
             pub fn new(inner: #ty_name #ty_generics) -> Self {
                 Self {
-                    inner: std::sync::Arc::new(inner),
+                    inner: std::sync::Arc::new(parking_lot::RwLock::new(inner)),
                 }
             }
         }
 
         impl #impl_generics std::ops::Deref for #handle_name #ty_generics #where_clause {
-            type Target = #ty_name #ty_generics;
+            type Target = parking_lot::RwLock<#ty_name #ty_generics>;
 
             fn deref(&self) -> &Self::Target {
                 &self.inner
