@@ -1,9 +1,9 @@
 use super::{
     semantic_inputs::{self},
-    CachedPipeline, MaterialHandle, PipelineCache, ShaderManager,
+    CachedPipeline, Material, PipelineCache, ShaderManager,
 };
 use crate::engine::object::{ObjectHierarchy, ObjectId};
-use wgpu::{Buffer, RenderPass, VertexStepMode};
+use parking_lot::RwLockReadGuard;
 use zerocopy::AsBytes;
 
 mod device_buffer;
@@ -22,16 +22,16 @@ pub use pipeline_provider::*;
 pub use renderer::*;
 pub use renderer_impls::*;
 
-pub struct RenderingCommand {
+pub struct RenderingCommand<'r> {
     pub pipeline: CachedPipeline,
-    pub material: MaterialHandle,
+    pub material: RwLockReadGuard<'r, Material>,
     pub vertex_count: u32,
     pub per_vertex_buffers: Vec<GenericBufferAllocation<Buffer>>,
     pub per_instance_buffer: Option<GenericBufferAllocation<Buffer>>,
 }
 
-impl RenderingCommand {
-    pub fn render<'r, 'c: 'r>(&'c self, render_pass: &mut RenderPass<'r>) {
+impl<'r> RenderingCommand<'r> {
+    pub fn render(&'r self, render_pass: &mut RenderPass<'r>) {
         render_pass.set_pipeline(self.pipeline.as_ref());
 
         for bind_group_index in self.material.bind_properties.values() {
@@ -54,14 +54,14 @@ impl RenderingCommand {
     }
 }
 
-pub fn build_rendering_command(
+pub fn build_rendering_command<'r>(
     object_id: ObjectId,
     object_hierarchy: &ObjectHierarchy,
-    renderer: &mut dyn Renderer,
+    renderer: &'r mut dyn Renderer,
     shader_mgr: &ShaderManager,
     pipeline_cache: &mut PipelineCache,
     frame_buffer_allocator: &mut FrameBufferAllocator,
-) -> Option<RenderingCommand> {
+) -> Option<RenderingCommand<'r>> {
     let matrix = object_hierarchy.matrix(object_id);
 
     let pipeline_provider = renderer.pipeline_provider();
@@ -72,10 +72,11 @@ pub fn build_rendering_command(
             return None;
         };
     let material = if let Some(material) = pipeline_provider.material() {
-        material
+        material.clone()
     } else {
         return None;
     };
+    let material = material.read();
 
     let per_instance_buffer = frame_buffer_allocator
         .alloc_staging_buffer(material.shader.reflected_shader.per_instance_input.stride);
@@ -122,9 +123,9 @@ pub fn build_rendering_command(
 
     Some(RenderingCommand {
         pipeline,
-        material,
         vertex_count: renderer.vertex_count(),
         per_vertex_buffers: renderer.vertex_buffers(),
         per_instance_buffer,
+        material: renderer.pipeline_provider().material().unwrap().read(),
     })
 }

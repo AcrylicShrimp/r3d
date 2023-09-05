@@ -1,4 +1,4 @@
-use codegen::Handle;
+use codegen::HandleMut;
 use half::f16;
 use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 use wgpu::{
@@ -20,7 +20,7 @@ pub use pipeline_layout_cache::*;
 pub use shader::*;
 pub use shader_reflection::*;
 
-#[derive(Handle)]
+#[derive(HandleMut)]
 pub struct Material {
     pub shader: ShaderHandle,
     pub pipeline_layout: CachedPipelineLayout,

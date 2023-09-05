@@ -98,13 +98,13 @@ impl RenderManager {
         Ok(render_pass)
     }
 
-    pub fn build_rendering_command(
+    pub fn build_rendering_command<'r>(
         &mut self,
         object_id: ObjectId,
         object_hierarchy: &ObjectHierarchy,
-        renderer: &mut dyn Renderer,
+        renderer: &'r mut dyn Renderer,
         shader_mgr: &ShaderManager,
-    ) -> Option<RenderingCommand> {
+    ) -> Option<RenderingCommand<'r>> {
         build_rendering_command(
             object_id,
             object_hierarchy,

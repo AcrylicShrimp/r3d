@@ -26,8 +26,8 @@ impl PipelineProvider {
         }
     }
 
-    pub fn material(&self) -> Option<MaterialHandle> {
-        self.material.clone()
+    pub fn material(&self) -> Option<&MaterialHandle> {
+        self.material.as_ref()
     }
 
     pub fn set_material(&mut self, material: MaterialHandle) {
@@ -62,7 +62,7 @@ impl PipelineProvider {
         }
 
         let material = if let Some(material) = &self.material {
-            material
+            material.read()
         } else {
             return None;
         };
