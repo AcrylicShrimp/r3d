@@ -96,28 +96,17 @@ impl Mat4 {
         ])
     }
 
+    /// Returns a matrix that transforms from local space to world space. It's right-handed.
     pub fn look_at(eye: Vec3, target: Vec3, up: Vec3) -> Self {
         let z = (eye - target).normalized();
-        let x = Vec3::cross(z, up).normalized();
-        let y = Vec3::cross(x, z).normalized();
+        let x = Vec3::cross(up, z).normalized();
+        let y = Vec3::cross(z, x).normalized();
 
         Self::new([
-            x.x,
-            y.x,
-            z.x,
-            0.0, //
-            x.y,
-            y.y,
-            z.y,
-            0.0, //
-            x.z,
-            y.z,
-            z.z,
-            0.0, //
-            Vec3::dot(-x, eye),
-            Vec3::dot(-y, eye),
-            Vec3::dot(-z, eye),
-            1.0, //
+            x.x, x.y, x.z, 0.0, //
+            y.x, y.y, y.z, 0.0, //
+            z.x, z.y, z.z, 0.0, //
+            eye.x, eye.y, eye.z, 1.0, //
         ])
     }
 
