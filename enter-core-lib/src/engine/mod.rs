@@ -1,8 +1,9 @@
 use self::{
-    ecs_system::render::RenderSystem,
+    ecs_system::{
+        render::RenderSystem, update_camera_transform_buffer::UpdateCameraTransformBufferSystem,
+    },
     gfx::{
-        semantic_bindings::KEY_CAMERA_TRANSFORM, BindGroupEntryResource, BindingPropKey,
-        DepthStencilMode, GfxContext, GfxContextCreationError, GfxContextHandle, Material,
+        Camera, DepthStencilMode, GfxContext, GfxContextCreationError, GfxContextHandle, Material,
         MaterialHandle, Mesh, MeshHandle, RenderManager, ScreenManager, ShaderManager,
     },
     math::{Mat4, Vec3},
@@ -135,6 +136,7 @@ impl Engine {
         {
             let mut world_mgr = ctx.world_mgr_mut();
             let world = world_mgr.world_mut();
+            world.register::<Camera>();
             world.register::<MeshRenderer>();
         }
 
@@ -156,6 +158,8 @@ impl Engine {
         target_fps: EngineTargetFps,
     ) -> Result<(), EngineExecError> {
 
+        let mut update_camera_transform_buffer_system =
+            UpdateCameraTransformBufferSystem::new(self.ctx.clone());
         let mut render_system = RenderSystem::new();
 
         self.ctx.window.set_visible(true);
@@ -204,6 +208,7 @@ impl Engine {
                         return;
                     }
 
+                    update_camera_transform_buffer_system.run_now(&self.ctx.world_mgr().world());
                     render_system.run_now(&self.ctx.world_mgr().world());
 
                     return;
@@ -213,6 +218,7 @@ impl Engine {
                         return;
                     }
 
+                    update_camera_transform_buffer_system.run_now(&self.ctx.world_mgr().world());
                     render_system.run_now(&self.ctx.world_mgr().world());
 
                     return;
