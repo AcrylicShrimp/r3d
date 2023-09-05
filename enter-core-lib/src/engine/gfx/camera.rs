@@ -1,6 +1,13 @@
-use super::Color;
+use super::{BindGroupLayoutCache, Color};
 use crate::engine::math::Mat4;
 use specs::{prelude::*, Component};
+use std::{mem::size_of, sync::Arc};
+use wgpu::{
+    BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutEntry, BindingResource,
+    BindingType, Buffer, BufferAddress, BufferBinding, BufferBindingType, BufferDescriptor,
+    BufferSize, BufferUsages, Device, Queue, ShaderStages,
+};
+use zerocopy::AsBytes;
 
 #[derive(Debug, Clone)]
 pub enum CameraClearMode {
@@ -112,4 +119,66 @@ pub struct Camera {
     pub mask: u32,
     pub clear_mode: CameraClearMode,
     pub projection: CameraProjection,
+    pub buffer: Arc<Buffer>,
+    pub bind_group: Arc<BindGroup>,
+}
+
+impl Camera {
+    pub fn new(
+        mask: u32,
+        clear_mode: CameraClearMode,
+        projection: CameraProjection,
+        device: &Device,
+        bind_group_layout_cache: &mut BindGroupLayoutCache,
+    ) -> Self {
+        let buffer = Arc::new(device.create_buffer(&BufferDescriptor {
+            label: Some("camera transform buffer"),
+            size: size_of::<[f32; 4 * 4]>() as BufferAddress,
+            usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
+            mapped_at_creation: false,
+        }));
+        let bind_group = Arc::new(
+            device.create_bind_group(&BindGroupDescriptor {
+                label: Some("camera transform bind group"),
+                layout: bind_group_layout_cache
+                    .create_layout(vec![BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: ShaderStages::VERTEX_FRAGMENT,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: Some(
+                                BufferSize::new(size_of::<[f32; 4 * 4]>() as u64).unwrap(),
+                            ),
+                        },
+                        count: None,
+                    }])
+                    .as_ref(),
+                entries: &[BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::Buffer(BufferBinding {
+                        buffer: &buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                }],
+            }),
+        );
+
+        Self {
+            mask,
+            clear_mode,
+            projection,
+            buffer,
+            bind_group,
+        }
+    }
+
+    pub fn update_buffer(&self, queue: &Queue, transform_matrix: &Mat4) {
+        queue.write_buffer(
+            &self.buffer,
+            0,
+            (transform_matrix.inversed() * self.projection.as_matrix()).as_bytes(),
+        );
+    }
 }
