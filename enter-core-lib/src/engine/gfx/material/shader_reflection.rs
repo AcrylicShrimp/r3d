@@ -283,6 +283,24 @@ fn reflect_globals(
         });
     }
 
+    let isolated_binding_groups =
+        Vec::from_iter(bindings.iter().enumerate().map(|(index, binding)| {
+            binding.binding == 0
+                && !bindings
+                    .iter()
+                    .enumerate()
+                    .any(|(other_index, other_binding)| {
+                        index != other_index && binding.group == other_binding.group
+                    })
+        }));
+
+    // Restrict semantic bindings to isolated binding groups.
+    for (index, binding) in bindings.iter_mut().enumerate() {
+        if !isolated_binding_groups[index] {
+            binding.semantic_binding = None;
+        }
+    }
+
     bindings
 }
 
