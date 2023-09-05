@@ -1,9 +1,12 @@
 use super::{
+    semantic_bindings,
     semantic_inputs::{self},
     CachedPipeline, Material, PipelineCache, ShaderManager,
 };
 use crate::engine::object::{ObjectHierarchy, ObjectId};
 use parking_lot::RwLockReadGuard;
+use std::sync::Arc;
+use wgpu::{BindGroup, Buffer, RenderPass, VertexStepMode};
 use zerocopy::AsBytes;
 
 mod device_buffer;
@@ -26,6 +29,7 @@ pub struct RenderingCommand<'r> {
     pub pipeline: CachedPipeline,
     pub material: RwLockReadGuard<'r, Material>,
     pub vertex_count: u32,
+    pub camera_transform_bind_group: Arc<BindGroup>,
     pub per_vertex_buffers: Vec<GenericBufferAllocation<Buffer>>,
     pub per_instance_buffer: Option<GenericBufferAllocation<Buffer>>,
 }
@@ -33,6 +37,19 @@ pub struct RenderingCommand<'r> {
 impl<'r> RenderingCommand<'r> {
     pub fn render(&'r self, render_pass: &mut RenderPass<'r>) {
         render_pass.set_pipeline(self.pipeline.as_ref());
+
+        if let Some(binding) =
+            self.material
+                .shader
+                .reflected_shader
+                .bindings
+                .iter()
+                .find(|binding| {
+                    binding.semantic_binding == Some(semantic_bindings::KEY_CAMERA_TRANSFORM)
+                })
+        {
+            render_pass.set_bind_group(binding.group, &self.camera_transform_bind_group, &[]);
+        }
 
         for bind_group_index in self.material.bind_properties.values() {
             let bind_group_holder = &self.material.bind_group_holders[bind_group_index.group_index];
@@ -55,6 +72,7 @@ impl<'r> RenderingCommand<'r> {
 }
 
 pub fn build_rendering_command<'r>(
+    camera_transform_bind_group: Arc<BindGroup>,
     object_id: ObjectId,
     object_hierarchy: &ObjectHierarchy,
     renderer: &'r mut dyn Renderer,
@@ -124,6 +142,7 @@ pub fn build_rendering_command<'r>(
     Some(RenderingCommand {
         pipeline,
         vertex_count: renderer.vertex_count(),
+        camera_transform_bind_group,
         per_vertex_buffers: renderer.vertex_buffers(),
         per_instance_buffer,
         material: renderer.pipeline_provider().material().unwrap().read(),

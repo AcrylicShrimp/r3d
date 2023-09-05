@@ -4,9 +4,11 @@ use super::{
     RenderingCommand, ShaderManager,
 };
 use crate::engine::object::{ObjectHierarchy, ObjectId};
+use std::sync::Arc;
 use wgpu::{
-    Color, CommandBuffer, CommandEncoder, CommandEncoderDescriptor, LoadOp, Operations, RenderPass,
-    RenderPassColorAttachment, RenderPassDepthStencilAttachment, SurfaceError, TextureView,
+    BindGroup, Color, CommandBuffer, CommandEncoder, CommandEncoderDescriptor, LoadOp, Operations,
+    RenderPass, RenderPassColorAttachment, RenderPassDepthStencilAttachment, SurfaceError,
+    TextureView,
 };
 use winit::dpi::PhysicalSize;
 
@@ -115,12 +117,14 @@ impl RenderManager {
 
     pub fn build_rendering_command<'r>(
         &mut self,
+        camera_transform_bind_group: Arc<BindGroup>,
         object_id: ObjectId,
         object_hierarchy: &ObjectHierarchy,
         renderer: &'r mut dyn Renderer,
         shader_mgr: &ShaderManager,
     ) -> Option<RenderingCommand<'r>> {
         build_rendering_command(
+            camera_transform_bind_group,
             object_id,
             object_hierarchy,
             renderer,
