@@ -15,6 +15,7 @@ use zerocopy::AsBytes;
 #[derive(Component)]
 #[storage(HashMapStorage)]
 pub struct MeshRenderer {
+    mask: u32,
     pipeline_provider: PipelineProvider,
     mesh: Option<MeshHandle>,
     vertex_buffer: Option<GenericBufferAllocation<Buffer>>,
@@ -55,10 +56,19 @@ impl MeshRenderer {
         }));
 
         Self {
+            mask: 0xFFFF_FFFF,
             pipeline_provider,
             mesh: None,
             vertex_buffer: None,
         }
+    }
+
+    pub fn mask(&self) -> u32 {
+        self.mask
+    }
+
+    pub fn set_mask(&mut self, mask: u32) {
+        self.mask = mask;
     }
 
     pub fn set_material(&mut self, material: MaterialHandle) {

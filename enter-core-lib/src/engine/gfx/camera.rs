@@ -109,6 +109,7 @@ impl CameraPerspectiveProjection {
 #[derive(Debug, Clone, Component)]
 #[storage(HashMapStorage)]
 pub struct Camera {
+    pub mask: u32,
     pub clear_mode: CameraClearMode,
     pub projection: CameraProjection,
 }
