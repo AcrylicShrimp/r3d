@@ -46,6 +46,10 @@ impl<'a> System<'a> for RenderSystem {
                     continue;
                 }
 
+                if mesh_renderer.mask() & camera.mask == 0 {
+                    continue;
+                }
+
                 if let Some(command) = render_mgr.build_rendering_command(
                     camera.bind_group.clone(),
                     object_id,
