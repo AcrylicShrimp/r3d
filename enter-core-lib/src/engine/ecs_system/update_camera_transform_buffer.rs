@@ -16,6 +16,7 @@ impl<'a> System<'a> for UpdateCameraTransformBufferSystem {
 
     fn run(&mut self, (objects, cameras): Self::SystemData) {
         let world_mgr = self.ctx.world_mgr();
+        let screen_mgr = self.ctx.screen_mgr();
         let object_hierarchy = world_mgr.object_hierarchy();
 
         for (object, camera) in (&objects, &cameras).join() {
@@ -26,7 +27,7 @@ impl<'a> System<'a> for UpdateCameraTransformBufferSystem {
             let object_id = object.object_id();
             let matrix = object_hierarchy.matrix(object_id);
 
-            camera.update_buffer(&self.ctx.gfx_ctx.queue, matrix);
+            camera.update_buffer(&screen_mgr, &self.ctx.gfx_ctx.queue, matrix);
         }
     }
 }

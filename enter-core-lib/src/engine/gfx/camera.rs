@@ -1,4 +1,4 @@
-use super::{BindGroupLayoutCache, Color};
+use super::{BindGroupLayoutCache, Color, ScreenManager};
 use crate::engine::math::Mat4;
 use specs::{prelude::*, Component};
 use std::{mem::size_of, sync::Arc};
@@ -59,7 +59,12 @@ impl CameraProjection {
         })
     }
 
-    pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Self {
+    pub fn perspective(
+        fov: f32,
+        aspect: CameraPerspectiveProjectionAspect,
+        near: f32,
+        far: f32,
+    ) -> Self {
         Self::Perspective(CameraPerspectiveProjection {
             fov,
             aspect,
@@ -68,10 +73,10 @@ impl CameraProjection {
         })
     }
 
-    pub fn as_matrix(&self) -> Mat4 {
+    pub fn as_matrix(&self, screen_mgr: &ScreenManager) -> Mat4 {
         match self {
             Self::Orthographic(projection) => projection.as_matrix(),
-            Self::Perspective(projection) => projection.as_matrix(),
+            Self::Perspective(projection) => projection.as_matrix(screen_mgr),
         }
     }
 }
@@ -102,15 +107,31 @@ impl CamereOrthographicProjection {
 #[derive(Debug, Clone)]
 pub struct CameraPerspectiveProjection {
     pub fov: f32,
-    pub aspect: f32,
+    pub aspect: CameraPerspectiveProjectionAspect,
     pub near: f32,
     pub far: f32,
 }
 
 impl CameraPerspectiveProjection {
-    pub fn as_matrix(&self) -> Mat4 {
-        Mat4::perspective(self.fov, self.aspect, self.near, self.far)
+    pub fn as_matrix(&self, screen_mgr: &ScreenManager) -> Mat4 {
+        Mat4::perspective(
+            self.fov,
+            match self.aspect {
+                CameraPerspectiveProjectionAspect::Screen => {
+                    screen_mgr.width() as f32 / screen_mgr.height() as f32
+                }
+                CameraPerspectiveProjectionAspect::Fixed(aspect) => aspect,
+            },
+            self.near,
+            self.far,
+        )
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CameraPerspectiveProjectionAspect {
+    Screen,
+    Fixed(f32),
 }
 
 #[derive(Debug, Clone, Component)]
@@ -174,11 +195,16 @@ impl Camera {
         }
     }
 
-    pub fn update_buffer(&self, queue: &Queue, transform_matrix: &Mat4) {
+    pub fn update_buffer(
+        &self,
+        screen_mgr: &ScreenManager,
+        queue: &Queue,
+        transform_matrix: &Mat4,
+    ) {
         queue.write_buffer(
             &self.buffer,
             0,
-            (transform_matrix.inversed() * self.projection.as_matrix()).as_bytes(),
+            (transform_matrix.inversed() * self.projection.as_matrix(screen_mgr)).as_bytes(),
         );
     }
 }
