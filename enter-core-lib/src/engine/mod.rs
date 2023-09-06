@@ -7,6 +7,7 @@ use self::{
         MaterialHandle, Mesh, MeshHandle, RenderManager, ScreenManager, ShaderManager,
     },
     math::{Mat4, Vec3},
+    time::TimeManager,
     vsync::TargetFrameInterval,
     world::WorldManager,
 };
@@ -31,6 +32,7 @@ pub mod gfx;
 pub mod math;
 pub mod object;
 pub mod scripting;
+pub mod time;
 pub mod transform;
 pub mod vsync;
 pub mod world;
@@ -49,6 +51,7 @@ pub struct Context {
     screen_mgr: RefCell<ScreenManager>,
     render_mgr: RefCell<RenderManager>,
     shader_mgr: ShaderManager,
+    time_mgr: RefCell<TimeManager>,
 }
 
 impl Context {
@@ -63,6 +66,7 @@ impl Context {
         )
         .into();
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
+        let time_mgr = TimeManager::new().into();
 
         Self {
             window,
@@ -71,6 +75,7 @@ impl Context {
             screen_mgr,
             render_mgr,
             shader_mgr,
+            time_mgr,
         }
     }
 
@@ -108,6 +113,14 @@ impl Context {
 
     pub fn shader_mgr(&self) -> &ShaderManager {
         &self.shader_mgr
+    }
+
+    pub fn time_mgr(&self) -> Ref<TimeManager> {
+        self.time_mgr.borrow()
+    }
+
+    pub fn time_mgr_mut(&self) -> RefMut<TimeManager> {
+        self.time_mgr.borrow_mut()
     }
 }
 
@@ -196,7 +209,13 @@ impl Engine {
 
                     last_frame_time = now;
 
+                    {
+                        let mut time_mgr = self.ctx.time_mgr_mut();
+                        time_mgr.update();
+                    }
+
                     // TODO: Update here.
+
                     {
                         let mut world_mgr = self.ctx.world_mgr_mut();
                         let (world, object_hierarchy) = world_mgr.split_mut();
@@ -217,6 +236,13 @@ impl Engine {
                     if loop_mode == EngineLoopMode::Poll {
                         return;
                     }
+
+                    {
+                        let mut time_mgr = self.ctx.time_mgr_mut();
+                        time_mgr.update();
+                    }
+
+                    // TODO: Update here.
 
                     update_camera_transform_buffer_system.run_now(&self.ctx.world_mgr().world());
                     render_system.run_now(&self.ctx.world_mgr().world());
