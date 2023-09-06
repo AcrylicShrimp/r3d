@@ -1,5 +1,5 @@
 use crate::engine::gfx::{
-    semantic_inputs::{KEY_NORMAL, KEY_POSITION},
+    semantic_inputs::{KEY_NORMAL, KEY_POSITION, KEY_UV},
     GenericBufferAllocation, HostBuffer, MaterialHandle, MeshHandle, PipelineProvider, Renderer,
     RendererVertexBufferAttribute, RendererVertexBufferLayout, SemanticShaderInputKey,
 };
@@ -26,7 +26,7 @@ impl MeshRenderer {
         let mut pipeline_provider = PipelineProvider::new();
 
         pipeline_provider.set_buffer_layouts(vec![RendererVertexBufferLayout {
-            array_stride: size_of::<[f32; 6]>() as BufferAddress,
+            array_stride: size_of::<[f32; 8]>() as BufferAddress,
             attributes: vec![
                 RendererVertexBufferAttribute {
                     key: KEY_POSITION,
@@ -35,6 +35,10 @@ impl MeshRenderer {
                 RendererVertexBufferAttribute {
                     key: KEY_NORMAL,
                     offset: size_of::<[f32; 3]>() as BufferAddress,
+                },
+                RendererVertexBufferAttribute {
+                    key: KEY_UV,
+                    offset: size_of::<[f32; 6]>() as BufferAddress,
                 },
             ],
         }]);
@@ -85,6 +89,7 @@ impl MeshRenderer {
         self.mesh = Some(mesh.clone());
 
         let mut vertices = Vec::with_capacity(mesh.data.faces.len() * 3 * 2);
+        let uvs = mesh.data.texture_coords[0].as_ref().unwrap();
 
         for face in &mesh.data.faces {
             for &face_index in &face.0 {
@@ -97,6 +102,10 @@ impl MeshRenderer {
                 vertices.push(normal.x);
                 vertices.push(normal.y);
                 vertices.push(normal.z);
+
+                let uv = &uvs[face_index as usize];
+                vertices.push(uv.x);
+                vertices.push(uv.y);
             }
         }
 
@@ -107,8 +116,7 @@ impl MeshRenderer {
                 usage: BufferUsages::VERTEX,
             }),
             0,
-            BufferSize::new((mesh.data.faces.len() * 3 * 2 * size_of::<[f32; 3]>()) as u64)
-                .unwrap(),
+            BufferSize::new((mesh.data.faces.len() * 3 * size_of::<[f32; 8]>()) as u64).unwrap(),
         ));
     }
 }
