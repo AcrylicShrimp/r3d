@@ -21,6 +21,10 @@ pub fn handle(item: TokenStream) -> TokenStream {
                     inner: std::sync::Arc::new(inner),
                 }
             }
+
+            pub fn as_ptr(&self) -> *const #ty_name #ty_generics {
+                std::sync::Arc::as_ptr(&self.inner)
+            }
         }
 
         impl #impl_generics std::ops::Deref for #handle_name #ty_generics #where_clause {

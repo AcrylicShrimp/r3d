@@ -10,7 +10,7 @@ use self::{
     vsync::TargetFrameInterval,
 };
 use codegen::Handle;
-use gfx::MeshRenderer;
+use gfx::{GlyphManager, MeshRenderer};
 use object::ObjectManager;
 use specs::prelude::*;
 use std::{
@@ -52,6 +52,7 @@ pub fn use_context() -> &'static Context {
 pub struct Context {
     window: Window,
     gfx_ctx: GfxContextHandle,
+    glyph_mgr: RefCell<GlyphManager>,
     object_mgr: RefCell<ObjectManager>,
     screen_mgr: RefCell<ScreenManager>,
     render_mgr: RefCell<RenderManager>,
@@ -62,6 +63,7 @@ pub struct Context {
 impl Context {
     pub fn new(window: Window, gfx_ctx: GfxContext, screen_width: u32, screen_height: u32) -> Self {
         let gfx_ctx = GfxContextHandle::new(gfx_ctx);
+        let glyph_mgr = GlyphManager::new(gfx_ctx.clone()).into();
         let object_mgr = ObjectManager::new().into();
         let screen_mgr = ScreenManager::new(screen_width, screen_height).into();
         let render_mgr = RenderManager::new(
@@ -76,6 +78,7 @@ impl Context {
         Self {
             window,
             gfx_ctx,
+            glyph_mgr,
             object_mgr,
             screen_mgr,
             render_mgr,
@@ -90,6 +93,14 @@ impl Context {
 
     pub fn gfx_ctx(&self) -> &GfxContextHandle {
         &self.gfx_ctx
+    }
+
+    pub fn glyph_mgr(&self) -> Ref<GlyphManager> {
+        self.glyph_mgr.borrow()
+    }
+
+    pub fn glyph_mgr_mut(&self) -> RefMut<GlyphManager> {
+        self.glyph_mgr.borrow_mut()
     }
 
     pub fn object_mgr(&self) -> Ref<ObjectManager> {

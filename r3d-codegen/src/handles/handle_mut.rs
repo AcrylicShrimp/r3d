@@ -21,6 +21,10 @@ pub fn handle_mut(item: TokenStream) -> TokenStream {
                     inner: std::sync::Arc::new(parking_lot::RwLock::new(inner)),
                 }
             }
+
+            pub fn as_ptr(&self) -> *const parking_lot::RwLock<#ty_name #ty_generics> {
+                std::sync::Arc::as_ptr(&self.inner)
+            }
         }
 
         impl #impl_generics std::ops::Deref for #handle_name #ty_generics #where_clause {

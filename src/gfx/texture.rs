@@ -53,4 +53,32 @@ impl Texture {
             height: height as u16,
         }
     }
+
+    pub fn create_empty(width: u16, height: u16, format: TextureFormat, device: &Device) -> Self {
+        let texture_extent = Extent3d {
+            width: width as _,
+            height: height as _,
+            depth_or_array_layers: 1,
+        };
+        let texture = device.create_texture(&TextureDescriptor {
+            label: None,
+            size: texture_extent,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format,
+            usage: TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
+            view_formats: &[format],
+        });
+        let view = texture.create_view(&Default::default());
+        let sampler = device.create_sampler(&Default::default());
+
+        Self {
+            texture: texture.into(),
+            view: view.into(),
+            sampler: sampler.into(),
+            width,
+            height,
+        }
+    }
 }

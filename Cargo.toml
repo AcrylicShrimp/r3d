@@ -15,6 +15,7 @@ codegen = { path = "./r3d-codegen" }
 
 bitvec = { version = "1" }
 colored = { version = "2" }
+fontdue = { version = "0.7" }
 half = { version = "2", features = ["num-traits", "zerocopy"] }
 image = { version = "0.24" }
 itertools = { version = "0.11" }
