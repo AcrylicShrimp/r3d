@@ -38,6 +38,12 @@ pub mod transform;
 pub mod vsync;
 pub mod world;
 
+// re-exports.
+pub use image;
+pub use russimp;
+pub use specs;
+pub use wgpu;
+
 static mut CONTEXT: MaybeUninit<ContextHandle> = MaybeUninit::uninit();
 
 pub fn use_context() -> &'static Context {
