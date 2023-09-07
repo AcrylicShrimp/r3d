@@ -24,7 +24,7 @@ impl<'a> System<'a> for RenderSystem {
         let context = use_context();
         let mut render_mgr = context.render_mgr_mut();
         let shader_mgr = context.shader_mgr();
-        let world_mgr = context.world_mgr();
+        let world_mgr = context.object_mgr();
         let object_hierarchy = world_mgr.object_hierarchy();
 
         let surface_texture = context.gfx_ctx().surface.get_current_texture().unwrap();

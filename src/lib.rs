@@ -8,10 +8,10 @@ use self::{
     },
     time::TimeManager,
     vsync::TargetFrameInterval,
-    world::WorldManager,
 };
 use codegen::Handle;
 use gfx::MeshRenderer;
+use object::ObjectManager;
 use specs::prelude::*;
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -36,7 +36,6 @@ pub mod scripting;
 pub mod time;
 pub mod transform;
 pub mod vsync;
-pub mod world;
 
 // re-exports.
 pub use image;
@@ -54,7 +53,7 @@ pub fn use_context() -> &'static Context {
 pub struct Context {
     window: Window,
     gfx_ctx: GfxContextHandle,
-    world_mgr: RefCell<WorldManager>,
+    object_mgr: RefCell<ObjectManager>,
     screen_mgr: RefCell<ScreenManager>,
     render_mgr: RefCell<RenderManager>,
     shader_mgr: ShaderManager,
@@ -64,7 +63,7 @@ pub struct Context {
 impl Context {
     pub fn new(window: Window, gfx_ctx: GfxContext, screen_width: u32, screen_height: u32) -> Self {
         let gfx_ctx = GfxContextHandle::new(gfx_ctx);
-        let world_mgr = WorldManager::new().into();
+        let object_mgr = ObjectManager::new().into();
         let screen_mgr = ScreenManager::new(screen_width, screen_height).into();
         let render_mgr = RenderManager::new(
             gfx_ctx.clone(),
@@ -78,7 +77,7 @@ impl Context {
         Self {
             window,
             gfx_ctx,
-            world_mgr,
+            object_mgr,
             screen_mgr,
             render_mgr,
             shader_mgr,
@@ -94,12 +93,12 @@ impl Context {
         &self.gfx_ctx
     }
 
-    pub fn world_mgr(&self) -> Ref<WorldManager> {
-        self.world_mgr.borrow()
+    pub fn object_mgr(&self) -> Ref<ObjectManager> {
+        self.object_mgr.borrow()
     }
 
-    pub fn world_mgr_mut(&self) -> RefMut<WorldManager> {
-        self.world_mgr.borrow_mut()
+    pub fn object_mgr_mut(&self) -> RefMut<ObjectManager> {
+        self.object_mgr.borrow_mut()
     }
 
     pub fn screen_mgr(&self) -> Ref<ScreenManager> {
@@ -154,7 +153,7 @@ impl Engine {
         }
 
         {
-            let mut world_mgr = ctx.world_mgr_mut();
+            let mut world_mgr = ctx.object_mgr_mut();
             let world = world_mgr.world_mut();
             world.register::<Camera>();
             world.register::<MeshRenderer>();
@@ -227,7 +226,7 @@ impl Engine {
                     // TODO: Update here.
 
                     {
-                        let mut world_mgr = self.ctx.world_mgr_mut();
+                        let mut world_mgr = self.ctx.object_mgr_mut();
                         let (world, object_hierarchy) = world_mgr.split_mut();
                         let transforms = world.read_component::<Transform>();
                         object_hierarchy.update_object_matrices(|entity| transforms.get(entity));
@@ -237,8 +236,8 @@ impl Engine {
                         return;
                     }
 
-                    update_camera_transform_buffer_system.run_now(&self.ctx.world_mgr().world());
-                    render_system.run_now(&self.ctx.world_mgr().world());
+                    update_camera_transform_buffer_system.run_now(&self.ctx.object_mgr().world());
+                    render_system.run_now(&self.ctx.object_mgr().world());
 
                     return;
                 }
@@ -254,8 +253,8 @@ impl Engine {
 
                     // TODO: Update here.
 
-                    update_camera_transform_buffer_system.run_now(&self.ctx.world_mgr().world());
-                    render_system.run_now(&self.ctx.world_mgr().world());
+                    update_camera_transform_buffer_system.run_now(&self.ctx.object_mgr().world());
+                    render_system.run_now(&self.ctx.object_mgr().world());
 
                     return;
                 }

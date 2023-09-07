@@ -1,16 +1,15 @@
-use super::{
-    object::{Object, ObjectHierarchy, ObjectId, ObjectIdAllocator},
-    transform::Transform,
-};
+use super::{Object, ObjectHierarchy, ObjectId, ObjectIdAllocator, ObjectNameRegistry};
+use crate::transform::Transform;
 use specs::prelude::*;
 
-pub struct WorldManager {
+pub struct ObjectManager {
     world: World,
     object_hierarchy: ObjectHierarchy,
+    object_name_registry: ObjectNameRegistry,
     object_id_allocator: ObjectIdAllocator,
 }
 
-impl WorldManager {
+impl ObjectManager {
     pub fn new() -> Self {
         let mut world = World::new();
 
@@ -20,6 +19,7 @@ impl WorldManager {
         Self {
             world,
             object_hierarchy: ObjectHierarchy::new(),
+            object_name_registry: ObjectNameRegistry::new(),
             object_id_allocator: ObjectIdAllocator::new(),
         }
     }
@@ -32,6 +32,14 @@ impl WorldManager {
         &mut self.world
     }
 
+    pub fn object_name_registry(&self) -> &ObjectNameRegistry {
+        &self.object_name_registry
+    }
+
+    pub fn object_name_registry_mut(&mut self) -> &mut ObjectNameRegistry {
+        &mut self.object_name_registry
+    }
+
     pub fn object_hierarchy(&self) -> &ObjectHierarchy {
         &self.object_hierarchy
     }
@@ -42,6 +50,7 @@ impl WorldManager {
 
     pub fn create_object_builder(
         &mut self,
+        name: Option<String>,
         transform: Option<Transform>,
     ) -> (ObjectId, EntityBuilder) {
         let object_id = self.object_id_allocator.alloc();
@@ -49,6 +58,7 @@ impl WorldManager {
         let entity = builder.entity;
 
         self.object_hierarchy.add(object_id, entity);
+        self.object_name_registry.set_name(object_id, name);
 
         (
             object_id,

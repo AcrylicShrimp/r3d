@@ -15,7 +15,7 @@ impl<'a> System<'a> for UpdateCameraTransformBufferSystem {
     type SystemData = (ReadStorage<'a, Object>, ReadStorage<'a, Camera>);
 
     fn run(&mut self, (objects, cameras): Self::SystemData) {
-        let world_mgr = self.ctx.world_mgr();
+        let world_mgr = self.ctx.object_mgr();
         let screen_mgr = self.ctx.screen_mgr();
         let object_hierarchy = world_mgr.object_hierarchy();
 
