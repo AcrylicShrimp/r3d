@@ -166,6 +166,10 @@ impl Engine {
         Ok(Self { event_loop, ctx })
     }
 
+    pub fn context(&self) -> ContextHandle {
+        self.ctx.clone()
+    }
+
     pub fn run(
         self,
         loop_mode: EngineLoopMode,
