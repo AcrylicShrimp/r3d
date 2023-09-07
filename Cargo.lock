@@ -254,16 +254,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bstr"
-version = "1.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8042c26c77e5bd6897a7358e0abb3ec412ed126d826988135653fc669263899d"
-dependencies = [
- "memchr",
- "serde",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1049,25 +1039,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
 
 [[package]]
-name = "lua-src"
-version = "546.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cb00c1380f1b4b4928dd211c07301ffa34872a239e590bd3219d9e5b213face"
-dependencies = [
- "cc",
-]
-
-[[package]]
-name = "luajit-src"
-version = "210.4.8+resty107baaf"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e05167e8b2a2185758d83ed23541e5bd8bce37072e4204e0ef2c9b322bc87c4e"
-dependencies = [
- "cc",
- "which",
-]
-
-[[package]]
 name = "malloc_buf"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1159,32 +1130,6 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "mlua"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c3a7a7ff4481ec91b951a733390211a8ace1caba57266ccb5f4d4966704e560"
-dependencies = [
- "bstr",
- "mlua-sys",
- "num-traits",
- "once_cell",
- "rustc-hash",
-]
-
-[[package]]
-name = "mlua-sys"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ec8b54eddb76093069cce9eeffb4c7b3a1a0fe66962d7bd44c4867928149ca3"
-dependencies = [
- "cc",
- "cfg-if",
- "lua-src",
- "luajit-src",
- "pkg-config",
 ]
 
 [[package]]
@@ -1609,7 +1554,6 @@ dependencies = [
  "half",
  "image",
  "itertools",
- "mlua",
  "naga",
  "parking_lot",
  "russimp",

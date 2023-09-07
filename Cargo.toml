@@ -18,7 +18,6 @@ colored = { version = "2" }
 half = { version = "2", features = ["num-traits", "zerocopy"] }
 image = { version = "0.24" }
 itertools = { version = "0.11" }
-mlua = { version = "0.9", features = ["lua54", "vendored"] }
 naga = { version = "0.13", features = ["wgsl-in"] }
 parking_lot = { version = "0.12", features = ["hardware-lock-elision"] }
 russimp = { version = "2", features = ["prebuilt", "static-link"] }

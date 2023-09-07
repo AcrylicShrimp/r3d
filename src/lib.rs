@@ -32,7 +32,6 @@ pub mod ecs_system;
 pub mod gfx;
 pub mod math;
 pub mod object;
-pub mod scripting;
 pub mod time;
 pub mod transform;
 pub mod vsync;

@@ -1,15 +1,10 @@
-use crate::scripting::UserDataOpsProvider;
-use codegen::{
-    hidden, lua_user_data_method, ops_extra, ops_to_string, rename, LuaError, LuaUserData,
-};
-use mlua::prelude::*;
 use std::{
     fmt::Display,
     ops::{Mul, MulAssign},
 };
 use thiserror::Error;
 
-#[derive(LuaError, Error, Debug)]
+#[derive(Error, Debug)]
 pub enum ColorParseHexError {
     #[error("the hex string is too short")]
     TooShortError,
@@ -35,9 +30,6 @@ pub struct Color {
     pub a: f32,
 }
 
-// #[lua_user_data_method]
-#[ops_to_string]
-#[ops_extra]
 impl Color {
     pub fn from_rgb(r: f32, g: f32, b: f32) -> Self {
         Self { r, g, b, a: 1f32 }
@@ -47,7 +39,6 @@ impl Color {
         Self { r, g, b, a }
     }
 
-    #[hidden]
     pub fn parse_hex(hex: impl AsRef<str>) -> Result<Self, ColorParseHexError> {
         let hex = hex.as_ref();
 
@@ -112,11 +103,6 @@ impl Color {
         } else {
             Err(ColorParseHexError::IncorrectLengthError)
         }
-    }
-
-    #[rename("parse_hex")]
-    fn lua_parse_hex(hex: String) -> Result<Self, ColorParseHexError> {
-        Self::parse_hex(hex)
     }
 
     pub fn transparent() -> Self {
@@ -232,11 +218,3 @@ impl Display for Color {
         )
     }
 }
-
-// impl UserDataOpsProvider for Color {
-//     fn add_ops<'lua, M: LuaUserDataMethods<'lua, Self>>(methods: &mut M) {
-//         methods.add_meta_function(LuaMetaMethod::Mul, |_lua, (lhs, rhs): (Self, Self)| {
-//             Ok(lhs * rhs)
-//         });
-//     }
-// }
