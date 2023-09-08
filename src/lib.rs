@@ -11,6 +11,7 @@ use self::{
 };
 use codegen::Handle;
 use gfx::{GlyphManager, MeshRenderer};
+use input::InputManager;
 use object::ObjectManager;
 use specs::prelude::*;
 use std::{
@@ -30,6 +31,7 @@ use winit::{
 
 pub mod ecs_system;
 pub mod gfx;
+pub mod input;
 pub mod math;
 pub mod object;
 pub mod time;
@@ -58,6 +60,7 @@ pub struct Context {
     render_mgr: RefCell<RenderManager>,
     shader_mgr: ShaderManager,
     time_mgr: RefCell<TimeManager>,
+    input_mgr: RefCell<InputManager>,
 }
 
 impl Context {
@@ -74,6 +77,7 @@ impl Context {
         .into();
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
         let time_mgr = TimeManager::new().into();
+        let input_mgr = InputManager::new().into();
 
         Self {
             window,
@@ -84,6 +88,7 @@ impl Context {
             render_mgr,
             shader_mgr,
             time_mgr,
+            input_mgr,
         }
     }
 
@@ -137,6 +142,14 @@ impl Context {
 
     pub fn time_mgr_mut(&self) -> RefMut<TimeManager> {
         self.time_mgr.borrow_mut()
+    }
+
+    pub fn input_mgr(&self) -> Ref<InputManager> {
+        self.input_mgr.borrow()
+    }
+
+    pub fn input_mgr_mut(&self) -> RefMut<InputManager> {
+        self.input_mgr.borrow_mut()
     }
 }
 
@@ -233,6 +246,11 @@ impl Engine {
                         time_mgr.update();
                     }
 
+                    {
+                        let mut input_mgr = self.ctx.input_mgr_mut();
+                        input_mgr.poll();
+                    }
+
                     // TODO: Update here.
 
                     {
@@ -280,7 +298,10 @@ impl Engine {
                     event: WindowEvent::KeyboardInput { input, .. },
                     window_id: id,
                 } if id == window_id => {
-                    // TODO: Handle keyboard input events here.
+                    self.ctx
+                        .input_mgr_mut()
+                        .keyboard_mut()
+                        .handle_window_event(input);
 
                     return;
                 }
