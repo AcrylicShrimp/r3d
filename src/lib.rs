@@ -10,6 +10,7 @@ use self::{
     vsync::TargetFrameInterval,
 };
 use codegen::Handle;
+use event::EventManager;
 use gfx::{GlyphManager, MeshRenderer};
 use input::InputManager;
 use object::ObjectManager;
@@ -30,6 +31,7 @@ use winit::{
 };
 
 pub mod ecs_system;
+pub mod event;
 pub mod gfx;
 pub mod input;
 pub mod math;
@@ -46,7 +48,7 @@ pub use wgpu;
 
 static mut CONTEXT: MaybeUninit<ContextHandle> = MaybeUninit::uninit();
 
-pub fn use_context() -> &'static Context {
+pub fn use_context() -> &'static ContextHandle {
     unsafe { CONTEXT.assume_init_ref() }
 }
 
@@ -61,6 +63,7 @@ pub struct Context {
     shader_mgr: ShaderManager,
     time_mgr: RefCell<TimeManager>,
     input_mgr: RefCell<InputManager>,
+    event_mgr: EventManager,
 }
 
 impl Context {
@@ -78,6 +81,7 @@ impl Context {
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
         let time_mgr = TimeManager::new().into();
         let input_mgr = InputManager::new().into();
+        let event_mgr = EventManager::new();
 
         Self {
             window,
@@ -89,6 +93,7 @@ impl Context {
             shader_mgr,
             time_mgr,
             input_mgr,
+            event_mgr,
         }
     }
 
@@ -150,6 +155,10 @@ impl Context {
 
     pub fn input_mgr_mut(&self) -> RefMut<InputManager> {
         self.input_mgr.borrow_mut()
+    }
+
+    pub fn event_mgr(&self) -> &EventManager {
+        &self.event_mgr
     }
 }
 
