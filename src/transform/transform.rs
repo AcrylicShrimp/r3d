@@ -93,6 +93,66 @@ impl Transform {
         scale
     }
 
+    /// Sets the world position of the given object.
+    pub fn set_world_position(
+        &mut self,
+        position: Vec3,
+        object_id: ObjectId,
+        hierarchy: &ObjectHierarchy,
+        transforms: &ReadStorage<Transform>,
+    ) {
+        let mut position = Vec4::from_vec3(position, 1.0);
+
+        for &parent_id in hierarchy.parents(object_id).iter().rev() {
+            let parent_entity = hierarchy.entity(parent_id);
+            if let Some(parent_transform) = transforms.get(parent_entity) {
+                position *= parent_transform.inverse_matrix();
+            }
+        }
+
+        self.position = position.into();
+    }
+
+    /// Sets the world rotation of the given object.
+    pub fn set_world_rotation(
+        &mut self,
+        rotation: Quat,
+        object_id: ObjectId,
+        hierarchy: &ObjectHierarchy,
+        transforms: &ReadStorage<Transform>,
+    ) {
+        let mut rotation = rotation;
+
+        for &parent_id in hierarchy.parents(object_id).iter().rev() {
+            let parent_entity = hierarchy.entity(parent_id);
+            if let Some(parent_transform) = transforms.get(parent_entity) {
+                rotation *= parent_transform.rotation.conjugated();
+            }
+        }
+
+        self.rotation = rotation;
+    }
+
+    /// Sets the world scale of the given object.
+    pub fn set_world_scale(
+        &mut self,
+        scale: Vec3,
+        object_id: ObjectId,
+        hierarchy: &ObjectHierarchy,
+        transforms: &ReadStorage<Transform>,
+    ) {
+        let mut scale = scale;
+
+        for &parent_id in hierarchy.parents(object_id).iter().rev() {
+            let parent_entity = hierarchy.entity(parent_id);
+            if let Some(parent_transform) = transforms.get(parent_entity) {
+                scale /= parent_transform.scale;
+            }
+        }
+
+        self.scale = scale;
+    }
+
     /// Returns the world forward vector of the given object.
     pub fn forward(
         &self,
