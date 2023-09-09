@@ -30,11 +30,26 @@ impl ObjectHandle {
             .cloned()
     }
 
+    pub fn parent(&self) -> Option<Self> {
+        self.ctx
+            .object_mgr()
+            .object_hierarchy()
+            .parent(self.object_id)
+            .map(|parent_id| self.ctx.object_mgr().object_handle(parent_id))
+    }
+
     pub fn set_name(&self, name: impl Into<Option<String>>) {
         self.ctx
             .object_mgr_mut()
             .object_name_registry_mut()
             .set_name(self.object_id, name.into());
+    }
+
+    pub fn set_parent(&self, parent: impl Into<Option<Self>>) {
+        self.ctx
+            .object_mgr_mut()
+            .object_hierarchy_mut()
+            .set_parent(self.object_id, parent.into().map(|h| h.object_id));
     }
 
     pub fn remove(&self) {
