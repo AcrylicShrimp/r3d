@@ -12,6 +12,7 @@ pub use raw_input_event_dispatcher::*;
 
 pub struct InputManager {
     keyboard: Keyboard,
+    mouse: Mouse,
     dispatcher: RawInputEventDispatcher,
 }
 
@@ -19,6 +20,7 @@ impl InputManager {
     pub fn new() -> Self {
         Self {
             keyboard: Keyboard::new(),
+            mouse: Mouse::new(),
             dispatcher: RawInputEventDispatcher::new(),
         }
     }
@@ -31,7 +33,16 @@ impl InputManager {
         &mut self.keyboard
     }
 
+    pub fn mouse(&self) -> &Mouse {
+        &self.mouse
+    }
+
+    pub fn mouse_mut(&mut self) -> &mut Mouse {
+        &mut self.mouse
+    }
+
     pub fn poll(&mut self) {
         self.keyboard.poll(&mut self.dispatcher);
+        self.mouse.poll(&mut self.dispatcher);
     }
 }

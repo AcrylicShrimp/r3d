@@ -331,18 +331,35 @@ impl Engine {
                     return;
                 }
                 Event::WindowEvent {
-                    event: WindowEvent::CursorMoved { position, .. },
+                    event: event @ WindowEvent::CursorMoved { .. },
                     window_id: id,
                 } if id == window_id => {
-                    // TODO: Handle cursor moved event here.
+                    self.ctx
+                        .input_mgr_mut()
+                        .mouse_mut()
+                        .handle_window_event(&event);
 
                     return;
                 }
                 Event::WindowEvent {
-                    event: WindowEvent::MouseInput { button, state, .. },
+                    event: event @ WindowEvent::MouseInput { .. },
                     window_id: id,
                 } if id == window_id => {
-                    // TODO: Handle mouse input event here.
+                    self.ctx
+                        .input_mgr_mut()
+                        .mouse_mut()
+                        .handle_window_event(&event);
+
+                    return;
+                }
+                Event::WindowEvent {
+                    event: event @ WindowEvent::MouseWheel { .. },
+                    window_id: id,
+                } if id == window_id => {
+                    self.ctx
+                        .input_mgr_mut()
+                        .mouse_mut()
+                        .handle_window_event(&event);
 
                     return;
                 }
