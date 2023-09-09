@@ -1,5 +1,7 @@
-use super::{Object, ObjectHierarchy, ObjectId, ObjectIdAllocator, ObjectNameRegistry};
-use crate::transform::Transform;
+use super::{
+    Object, ObjectHandle, ObjectHierarchy, ObjectId, ObjectIdAllocator, ObjectNameRegistry,
+};
+use crate::{transform::Transform, use_context};
 use specs::prelude::*;
 
 pub struct ObjectManager {
@@ -48,11 +50,19 @@ impl ObjectManager {
         &mut self.object_hierarchy
     }
 
+    pub fn object_handle(&self, object_id: ObjectId) -> ObjectHandle {
+        ObjectHandle::new(
+            use_context().clone(),
+            self.object_hierarchy.entity(object_id),
+            object_id,
+        )
+    }
+
     pub fn create_object_builder(
         &mut self,
         name: Option<String>,
         transform: Option<Transform>,
-    ) -> (ObjectId, EntityBuilder) {
+    ) -> (ObjectHandle, EntityBuilder) {
         let object_id = self.object_id_allocator.alloc();
         let builder = self.world.create_entity();
         let entity = builder.entity;
@@ -60,12 +70,21 @@ impl ObjectManager {
         self.object_hierarchy.add(object_id, entity);
         self.object_name_registry.set_name(object_id, name);
 
+        let object_handle = ObjectHandle::new(use_context().clone(), entity, object_id);
+
         (
-            object_id,
+            object_handle,
             builder
                 .with(Object::new(entity, object_id))
                 .with(transform.unwrap_or_default()),
         )
+    }
+
+    pub fn remove_object(&mut self, handle: &ObjectHandle) {
+        self.world.delete_entity(handle.entity).unwrap();
+        self.object_hierarchy.remove(handle.object_id);
+        self.object_id_allocator.dealloc(handle.object_id);
+        self.object_name_registry.set_name(handle.object_id, None);
     }
 
     pub fn split(&self) -> (&World, &ObjectHierarchy) {

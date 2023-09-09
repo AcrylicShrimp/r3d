@@ -1,11 +1,15 @@
 use specs::{prelude::*, Component};
 
+mod object_component;
+mod object_handle;
 mod object_hierarchy;
 mod object_id;
 mod object_id_allocator;
 mod object_manager;
 mod object_name_registry;
 
+pub use object_component::*;
+pub use object_handle::*;
 pub use object_hierarchy::*;
 pub use object_id::*;
 pub use object_id_allocator::*;

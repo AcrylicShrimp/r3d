@@ -1,6 +1,6 @@
 use crate::{
     math::{Mat4, Quat, Vec3, Vec4},
-    object::{ObjectHierarchy, ObjectId},
+    object::{ObjectComponent, ObjectHandle, ObjectHierarchy, ObjectId},
 };
 use specs::{prelude::*, Component};
 
@@ -95,11 +95,10 @@ impl Transform {
 
     /// Sets the world position of the given object.
     pub fn set_world_position(
-        &mut self,
         position: Vec3,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: &ReadStorage<Transform>,
+        transforms: &mut WriteStorage<Transform>,
     ) {
         let mut position = Vec4::from_vec3(position, 1.0);
 
@@ -110,16 +109,18 @@ impl Transform {
             }
         }
 
-        self.position = position.into();
+        transforms
+            .get_mut(hierarchy.entity(object_id))
+            .unwrap()
+            .position = position.into();
     }
 
     /// Sets the world rotation of the given object.
     pub fn set_world_rotation(
-        &mut self,
         rotation: Quat,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: &ReadStorage<Transform>,
+        transforms: &mut WriteStorage<Transform>,
     ) {
         let mut rotation = rotation;
 
@@ -130,16 +131,18 @@ impl Transform {
             }
         }
 
-        self.rotation = rotation;
+        transforms
+            .get_mut(hierarchy.entity(object_id))
+            .unwrap()
+            .rotation = rotation;
     }
 
     /// Sets the world scale of the given object.
     pub fn set_world_scale(
-        &mut self,
         scale: Vec3,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: &ReadStorage<Transform>,
+        transforms: &mut WriteStorage<Transform>,
     ) {
         let mut scale = scale;
 
@@ -150,7 +153,10 @@ impl Transform {
             }
         }
 
-        self.scale = scale;
+        transforms
+            .get_mut(hierarchy.entity(object_id))
+            .unwrap()
+            .scale = scale;
     }
 
     /// Returns the world forward vector of the given object.
@@ -227,5 +233,160 @@ impl Default for Transform {
             rotation: Default::default(),
             scale: Vec3::ONE,
         }
+    }
+}
+
+pub struct TransformComponent {
+    object: ObjectHandle,
+}
+
+impl ObjectComponent for TransformComponent {
+    type Component = Transform;
+
+    fn new(object: ObjectHandle) -> Self {
+        Self { object }
+    }
+
+    fn object(&self) -> &ObjectHandle {
+        &self.object
+    }
+}
+
+impl TransformComponent {
+    /// Returns the world position of the given object.
+    pub fn world_position(&self) -> Vec3 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms.get(self.object.entity).unwrap().world_position(
+            object_id,
+            &hierarchy,
+            &transforms,
+        )
+    }
+
+    /// Returns the world rotation of the given object.
+    pub fn world_rotation(&self) -> Quat {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms.get(self.object.entity).unwrap().world_rotation(
+            object_id,
+            &hierarchy,
+            &transforms,
+        )
+    }
+
+    /// Returns the world scale of the given object.
+    pub fn world_scale(&self) -> Vec3 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .world_scale(object_id, &hierarchy, &transforms)
+    }
+
+    /// Sets the world position of the given object.
+    pub fn set_world_position(&mut self, position: Vec3) {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let mut transforms = world.write_component::<Transform>();
+        Transform::set_world_position(position, object_id, &hierarchy, &mut transforms);
+    }
+
+    /// Sets the world rotation of the given object.
+    pub fn set_world_rotation(&mut self, rotation: Quat) {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let mut transforms = world.write_component::<Transform>();
+        Transform::set_world_rotation(rotation, object_id, &hierarchy, &mut transforms);
+    }
+
+    /// Sets the world scale of the given object.
+    pub fn set_world_scale(&mut self, scale: Vec3) {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let mut transforms = world.write_component::<Transform>();
+        Transform::set_world_scale(scale, object_id, &hierarchy, &mut transforms);
+    }
+
+    /// Returns the world forward vector of the given object.
+    pub fn forward(&self) -> Vec3 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .forward(object_id, &hierarchy, &transforms)
+    }
+
+    /// Returns the world right vector of the given object.
+    pub fn backward(&self) -> Vec3 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .backward(object_id, &hierarchy, &transforms)
+    }
+
+    /// Returns the world right vector of the given object.
+    pub fn right(&self) -> Vec3 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .right(object_id, &hierarchy, &transforms)
+    }
+
+    /// Returns the world left vector of the given object.
+    pub fn left(&self) -> Vec3 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .left(object_id, &hierarchy, &transforms)
+    }
+
+    /// Returns the world up vector of the given object.
+    pub fn up(&self) -> Vec3 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .up(object_id, &hierarchy, &transforms)
+    }
+
+    /// Returns the world down vector of the given object.
+    pub fn down(&self) -> Vec3 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let (world, hierarchy) = object_mgr.split();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .down(object_id, &hierarchy, &transforms)
     }
 }
