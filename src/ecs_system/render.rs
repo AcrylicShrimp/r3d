@@ -31,7 +31,10 @@ impl<'a> System<'a> for RenderSystem {
         let surface_texture_view = surface_texture.texture.create_view(&Default::default());
         let mut encoder = render_mgr.create_encoder();
 
-        for (object, camera) in (&objects, &cameras).join() {
+        let mut camera_objects = (&objects, &cameras).join().collect::<Vec<_>>();
+        camera_objects.sort_unstable_by_key(|&(_, camera)| camera.depth);
+
+        for (object, camera) in camera_objects {
             if !object_hierarchy.is_active(object.object_id()) {
                 continue;
             }

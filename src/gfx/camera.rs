@@ -48,15 +48,8 @@ pub enum CameraProjection {
 }
 
 impl CameraProjection {
-    pub fn orthographic(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Self {
-        Self::Orthographic(CamereOrthographicProjection {
-            left,
-            right,
-            bottom,
-            top,
-            near,
-            far,
-        })
+    pub fn orthographic(width: f32, near: f32, far: f32) -> Self {
+        Self::Orthographic(CamereOrthographicProjection { width, near, far })
     }
 
     pub fn perspective(
@@ -75,7 +68,7 @@ impl CameraProjection {
 
     pub fn as_matrix(&self, screen_mgr: &ScreenManager) -> Mat4 {
         match self {
-            Self::Orthographic(projection) => projection.as_matrix(),
+            Self::Orthographic(projection) => projection.as_matrix(screen_mgr),
             Self::Perspective(projection) => projection.as_matrix(screen_mgr),
         }
     }
@@ -83,21 +76,19 @@ impl CameraProjection {
 
 #[derive(Debug, Clone)]
 pub struct CamereOrthographicProjection {
-    pub left: f32,
-    pub right: f32,
-    pub bottom: f32,
-    pub top: f32,
+    pub width: f32,
     pub near: f32,
     pub far: f32,
 }
 
 impl CamereOrthographicProjection {
-    pub fn as_matrix(&self) -> Mat4 {
+    pub fn as_matrix(&self, screen_mgr: &ScreenManager) -> Mat4 {
+        let aspect = screen_mgr.width() as f32 / screen_mgr.height() as f32;
         Mat4::orthographic(
-            self.left,
-            self.right,
-            self.bottom,
-            self.top,
+            self.width * -0.5,
+            self.width * 0.5,
+            self.width * aspect * -0.5,
+            self.width * aspect * 0.5,
             self.near,
             self.far,
         )
@@ -138,6 +129,7 @@ pub enum CameraPerspectiveProjectionAspect {
 #[storage(HashMapStorage)]
 pub struct Camera {
     pub mask: u32,
+    pub depth: u32,
     pub clear_mode: CameraClearMode,
     pub projection: CameraProjection,
     pub buffer: Arc<Buffer>,
@@ -147,6 +139,7 @@ pub struct Camera {
 impl Camera {
     pub fn new(
         mask: u32,
+        depth: u32,
         clear_mode: CameraClearMode,
         projection: CameraProjection,
         device: &Device,
@@ -188,6 +181,7 @@ impl Camera {
 
         Self {
             mask,
+            depth,
             clear_mode,
             projection,
             buffer,
