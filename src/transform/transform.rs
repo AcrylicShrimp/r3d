@@ -253,6 +253,70 @@ impl ObjectComponent for TransformComponent {
 }
 
 impl TransformComponent {
+    /// Returns the transform matrix that transforms from local space to world space.
+    pub fn matrix(&self) -> Mat4 {
+        let object_mgr = self.object.ctx.object_mgr();
+        let world = object_mgr.world();
+        let transforms = world.read_component::<Transform>();
+        transforms.get(self.object.entity).unwrap().matrix()
+    }
+
+    /// Returns the inverse transform matrix that transforms from world space to local space.
+    pub fn inverse_matrix(&self) -> Mat4 {
+        let object_mgr = self.object.ctx.object_mgr();
+        let world = object_mgr.world();
+        let transforms = world.read_component::<Transform>();
+        transforms.get(self.object.entity).unwrap().inverse_matrix()
+    }
+
+    /// Returns the local position of the given object.
+    pub fn position(&self) -> Vec3 {
+        let object_mgr = self.object.ctx.object_mgr();
+        let world = object_mgr.world();
+        let transforms = world.read_component::<Transform>();
+        transforms.get(self.object.entity).unwrap().position
+    }
+
+    /// Returns the local rotation of the given object.
+    pub fn rotation(&self) -> Quat {
+        let object_mgr = self.object.ctx.object_mgr();
+        let world = object_mgr.world();
+        let transforms = world.read_component::<Transform>();
+        transforms.get(self.object.entity).unwrap().rotation
+    }
+
+    /// Returns the local scale of the given object.
+    pub fn scale(&self) -> Vec3 {
+        let object_mgr = self.object.ctx.object_mgr();
+        let world = object_mgr.world();
+        let transforms = world.read_component::<Transform>();
+        transforms.get(self.object.entity).unwrap().scale
+    }
+
+    /// Sets the local position of the given object.
+    pub fn set_position(&self, position: Vec3) {
+        let mut object_mgr = self.object.ctx.object_mgr_mut();
+        let world = object_mgr.world_mut();
+        let mut transforms = world.write_component::<Transform>();
+        transforms.get_mut(self.object.entity).unwrap().position = position;
+    }
+
+    /// Sets the local rotation of the given object.
+    pub fn set_rotation(&self, rotation: Quat) {
+        let mut object_mgr = self.object.ctx.object_mgr_mut();
+        let world = object_mgr.world_mut();
+        let mut transforms = world.write_component::<Transform>();
+        transforms.get_mut(self.object.entity).unwrap().rotation = rotation;
+    }
+
+    /// Sets the local scale of the given object.
+    pub fn set_scale(&self, scale: Vec3) {
+        let mut object_mgr = self.object.ctx.object_mgr_mut();
+        let world = object_mgr.world_mut();
+        let mut transforms = world.write_component::<Transform>();
+        transforms.get_mut(self.object.entity).unwrap().scale = scale;
+    }
+
     /// Returns the world position of the given object.
     pub fn world_position(&self) -> Vec3 {
         let object_id = self.object.object_id;
