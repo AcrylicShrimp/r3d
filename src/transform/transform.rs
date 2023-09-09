@@ -296,6 +296,10 @@ impl TransformComponent {
     /// Sets the local position of the given object.
     pub fn set_position(&self, position: Vec3) {
         let mut object_mgr = self.object.ctx.object_mgr_mut();
+        object_mgr
+            .object_hierarchy_mut()
+            .set_dirty(self.object.object_id);
+
         let world = object_mgr.world_mut();
         let mut transforms = world.write_component::<Transform>();
         transforms.get_mut(self.object.entity).unwrap().position = position;
@@ -304,6 +308,10 @@ impl TransformComponent {
     /// Sets the local rotation of the given object.
     pub fn set_rotation(&self, rotation: Quat) {
         let mut object_mgr = self.object.ctx.object_mgr_mut();
+        object_mgr
+            .object_hierarchy_mut()
+            .set_dirty(self.object.object_id);
+
         let world = object_mgr.world_mut();
         let mut transforms = world.write_component::<Transform>();
         transforms.get_mut(self.object.entity).unwrap().rotation = rotation;
@@ -312,6 +320,10 @@ impl TransformComponent {
     /// Sets the local scale of the given object.
     pub fn set_scale(&self, scale: Vec3) {
         let mut object_mgr = self.object.ctx.object_mgr_mut();
+        object_mgr
+            .object_hierarchy_mut()
+            .set_dirty(self.object.object_id);
+
         let world = object_mgr.world_mut();
         let mut transforms = world.write_component::<Transform>();
         transforms.get_mut(self.object.entity).unwrap().scale = scale;
@@ -358,8 +370,10 @@ impl TransformComponent {
     /// Sets the world position of the given object.
     pub fn set_world_position(&self, position: Vec3) {
         let object_id = self.object.object_id;
-        let object_mgr = self.object.ctx.object_mgr();
-        let (world, hierarchy) = object_mgr.split();
+        let mut object_mgr = self.object.ctx.object_mgr_mut();
+        let (world, hierarchy) = object_mgr.split_mut();
+        hierarchy.set_dirty(self.object.object_id);
+
         let mut transforms = world.write_component::<Transform>();
         Transform::set_world_position(position, object_id, &hierarchy, &mut transforms);
     }
@@ -367,8 +381,10 @@ impl TransformComponent {
     /// Sets the world rotation of the given object.
     pub fn set_world_rotation(&self, rotation: Quat) {
         let object_id = self.object.object_id;
-        let object_mgr = self.object.ctx.object_mgr();
-        let (world, hierarchy) = object_mgr.split();
+        let mut object_mgr = self.object.ctx.object_mgr_mut();
+        let (world, hierarchy) = object_mgr.split_mut();
+        hierarchy.set_dirty(self.object.object_id);
+
         let mut transforms = world.write_component::<Transform>();
         Transform::set_world_rotation(rotation, object_id, &hierarchy, &mut transforms);
     }
@@ -376,8 +392,10 @@ impl TransformComponent {
     /// Sets the world scale of the given object.
     pub fn set_world_scale(&self, scale: Vec3) {
         let object_id: ObjectId = self.object.object_id;
-        let object_mgr = self.object.ctx.object_mgr();
-        let (world, hierarchy) = object_mgr.split();
+        let mut object_mgr = self.object.ctx.object_mgr_mut();
+        let (world, hierarchy) = object_mgr.split_mut();
+        hierarchy.set_dirty(self.object.object_id);
+
         let mut transforms = world.write_component::<Transform>();
         Transform::set_world_scale(scale, object_id, &hierarchy, &mut transforms);
     }
