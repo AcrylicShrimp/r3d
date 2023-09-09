@@ -46,8 +46,10 @@ pub use russimp;
 pub use specs;
 pub use wgpu;
 
+#[deprecated(note = "Remove this.")]
 static mut CONTEXT: MaybeUninit<ContextHandle> = MaybeUninit::uninit();
 
+#[deprecated(note = "Remove this.")]
 pub fn use_context() -> &'static ContextHandle {
     unsafe { CONTEXT.assume_init_ref() }
 }
