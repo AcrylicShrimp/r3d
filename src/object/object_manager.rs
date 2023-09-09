@@ -58,6 +58,20 @@ impl ObjectManager {
         )
     }
 
+    pub fn find(&self, name: &str) -> Option<ObjectHandle> {
+        self.object_name_registry
+            .ids(name)
+            .and_then(|mut ids| ids.next())
+            .map(|id| self.object_handle(id))
+    }
+
+    pub fn find_all(&self, name: &str) -> Vec<ObjectHandle> {
+        self.object_name_registry
+            .ids(name)
+            .map(|ids| ids.map(|id| self.object_handle(id)).collect())
+            .unwrap_or_default()
+    }
+
     pub fn create_object_builder(
         &mut self,
         name: Option<String>,
