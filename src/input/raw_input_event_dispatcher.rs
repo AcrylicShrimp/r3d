@@ -7,7 +7,5 @@ impl RawInputEventDispatcher {
         Self {}
     }
 
-    pub fn dispatch(&mut self, raw_input: &RawInput) {
-        println!("{}: {}", raw_input.name, raw_input.value);
-    }
+    pub fn dispatch(&mut self, raw_input: &RawInput) {}
 }
