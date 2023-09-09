@@ -292,7 +292,7 @@ impl TransformComponent {
     }
 
     /// Sets the world position of the given object.
-    pub fn set_world_position(&mut self, position: Vec3) {
+    pub fn set_world_position(&self, position: Vec3) {
         let object_id = self.object.object_id;
         let object_mgr = self.object.ctx.object_mgr();
         let (world, hierarchy) = object_mgr.split();
@@ -301,7 +301,7 @@ impl TransformComponent {
     }
 
     /// Sets the world rotation of the given object.
-    pub fn set_world_rotation(&mut self, rotation: Quat) {
+    pub fn set_world_rotation(&self, rotation: Quat) {
         let object_id = self.object.object_id;
         let object_mgr = self.object.ctx.object_mgr();
         let (world, hierarchy) = object_mgr.split();
@@ -310,8 +310,8 @@ impl TransformComponent {
     }
 
     /// Sets the world scale of the given object.
-    pub fn set_world_scale(&mut self, scale: Vec3) {
-        let object_id = self.object.object_id;
+    pub fn set_world_scale(&self, scale: Vec3) {
+        let object_id: ObjectId = self.object.object_id;
         let object_mgr = self.object.ctx.object_mgr();
         let (world, hierarchy) = object_mgr.split();
         let mut transforms = world.write_component::<Transform>();
