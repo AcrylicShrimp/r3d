@@ -41,7 +41,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Vec3 {
         let mut position = Vec4::from_vec3(self.position, 1.0);
 
@@ -60,7 +60,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Quat {
         let mut rotation = self.rotation;
 
@@ -79,7 +79,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Vec3 {
         let mut scale = self.scale;
 
@@ -98,7 +98,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Vec3 {
         let rotation = self.world_rotation(object_id, hierarchy, transforms);
         rotation * Vec3::FORWARD
@@ -109,7 +109,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Vec3 {
         let rotation = self.world_rotation(object_id, hierarchy, transforms);
         rotation * Vec3::BACKWARD
@@ -120,7 +120,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Vec3 {
         let rotation = self.world_rotation(object_id, hierarchy, transforms);
         rotation * Vec3::RIGHT
@@ -131,7 +131,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Vec3 {
         let rotation = self.world_rotation(object_id, hierarchy, transforms);
         rotation * Vec3::LEFT
@@ -142,7 +142,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Vec3 {
         let rotation = self.world_rotation(object_id, hierarchy, transforms);
         rotation * Vec3::UP
@@ -153,7 +153,7 @@ impl Transform {
         &self,
         object_id: ObjectId,
         hierarchy: &ObjectHierarchy,
-        transforms: ReadStorage<Transform>,
+        transforms: &ReadStorage<Transform>,
     ) -> Vec3 {
         let rotation = self.world_rotation(object_id, hierarchy, transforms);
         rotation * Vec3::DOWN
