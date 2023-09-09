@@ -4,6 +4,7 @@ use std::any::Any;
 mod event_bus;
 mod event_dispatcher;
 mod event_handler;
+pub mod event_types;
 
 pub use event_bus::*;
 pub use event_dispatcher::*;

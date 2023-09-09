@@ -10,7 +10,7 @@ use self::{
     vsync::TargetFrameInterval,
 };
 use codegen::Handle;
-use event::EventManager;
+use event::{event_types, EventManager};
 use gfx::{GlyphManager, MeshRenderer};
 use input::InputManager;
 use object::ObjectManager;
@@ -260,7 +260,7 @@ impl Engine {
                         input_mgr.poll();
                     }
 
-                    // TODO: Update here.
+                    self.ctx.event_mgr().dispatch(&event_types::Update);
 
                     {
                         let mut world_mgr = self.ctx.object_mgr_mut();
@@ -288,7 +288,7 @@ impl Engine {
                         time_mgr.update();
                     }
 
-                    // TODO: Update here.
+                    self.ctx.event_mgr().dispatch(&event_types::Update);
 
                     update_camera_transform_buffer_system.run_now(&self.ctx.object_mgr().world());
                     render_system.run_now(&self.ctx.object_mgr().world());
