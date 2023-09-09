@@ -27,12 +27,12 @@ impl Vec3 {
     pub const FORWARD: Self = Self {
         x: 0.0,
         y: 0.0,
-        z: 1.0,
+        z: -1.0,
     };
     pub const BACKWARD: Self = Self {
         x: 0.0,
         y: 0.0,
-        z: -1.0,
+        z: 1.0,
     };
     pub const UP: Self = Self {
         x: 0.0,
