@@ -41,29 +41,31 @@ impl<'r> RenderingCommand<'r> {
         render_pass.set_pipeline(self.pipeline.as_ref());
 
         for binding in &self.material.shader.reflected_shader.bindings {
+            let key = if let Some(key) = binding.semantic_binding {
+                key
+            } else {
+                continue;
+            };
+
+            match key {
+                semantic_bindings::KEY_CAMERA_TRANSFORM => {
+                    render_pass.set_bind_group(
+                        binding.group,
+                        &self.camera_transform_bind_group,
+                        &[],
+                    );
+                }
+                _ => {
+                    if let Some(bind_group) = self.bind_group_provider.bind_group(0, key) {
+                        render_pass.set_bind_group(binding.group, &bind_group, &[]);
+                    }
+                }
+            }
+
             if binding.semantic_binding == Some(semantic_bindings::KEY_CAMERA_TRANSFORM) {
+                render_pass.set_bind_group(binding.group, &self.camera_transform_bind_group, &[]);
                 continue;
             }
-
-            if let Some(bind_group) = self
-                .bind_group_provider
-                .bind_group(0, binding.semantic_binding.unwrap())
-            {
-                render_pass.set_bind_group(binding.group, &bind_group, &[]);
-            }
-        }
-
-        if let Some(binding) =
-            self.material
-                .shader
-                .reflected_shader
-                .bindings
-                .iter()
-                .find(|&binding| {
-                    binding.semantic_binding == Some(semantic_bindings::KEY_CAMERA_TRANSFORM)
-                })
-        {
-            render_pass.set_bind_group(binding.group, &self.camera_transform_bind_group, &[]);
         }
 
         for bind_group_index in self.material.bind_properties.values() {
