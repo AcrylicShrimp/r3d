@@ -5,7 +5,7 @@ use crate::gfx::{
     RendererVertexBufferLayout, SemanticShaderBindingKey, SemanticShaderInputKey,
 };
 use specs::{prelude::*, Component};
-use std::{mem::size_of, sync::Arc};
+use std::mem::size_of;
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     BindGroup, Buffer, BufferAddress, BufferSize, BufferUsages, CompareFunction, DepthStencilState,
