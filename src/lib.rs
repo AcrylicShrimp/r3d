@@ -10,7 +10,10 @@ use self::{
     vsync::TargetFrameInterval,
 };
 use codegen::Handle;
-use ecs_system::{update_ui_element::UpdateUIElement, update_ui_scaler::UpdateUIScaler};
+use ecs_system::{
+    make_ui_scaler_dirty::MakeUIScalerDirty, update_ui_element::UpdateUIElement,
+    update_ui_scaler::UpdateUIScaler,
+};
 use event::{event_types, EventManager};
 use gfx::{GlyphManager, MeshRenderer, UIElementRenderer};
 use input::InputManager;
@@ -235,11 +238,15 @@ impl Engine {
         loop_mode: EngineLoopMode,
         target_fps: EngineTargetFps,
     ) -> Result<(), EngineExecError> {
+        let mut make_ui_scaler_dirty = MakeUIScalerDirty::new(self.ctx.clone());
         let mut update_ui_scaler = UpdateUIScaler::new(self.ctx.clone());
         let mut update_ui_element = UpdateUIElement::new(self.ctx.clone());
         let mut update_camera_transform_buffer_system =
             UpdateCameraTransformBufferSystem::new(self.ctx.clone());
-        let mut render_system = RenderSystem::new();
+        let mut render_system = RenderSystem::new(
+            &self.ctx.gfx_ctx.device,
+            self.ctx.render_mgr_mut().bind_group_layout_cache(),
+        );
 
         self.ctx.window.set_visible(true);
 
@@ -287,6 +294,7 @@ impl Engine {
 
                     self.ctx.event_mgr().dispatch(&event_types::Update);
 
+                    make_ui_scaler_dirty.run_now(&self.ctx.world());
                     update_ui_scaler.run_now(&self.ctx.world());
                     update_ui_element.run_now(&self.ctx.world());
 
@@ -327,6 +335,7 @@ impl Engine {
 
                     self.ctx.event_mgr().dispatch(&event_types::Update);
 
+                    make_ui_scaler_dirty.run_now(&self.ctx.world());
                     update_ui_scaler.run_now(&self.ctx.world());
                     update_ui_element.run_now(&self.ctx.world());
 
