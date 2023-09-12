@@ -14,9 +14,9 @@ use std::{mem::size_of, sync::Arc};
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutEntry, BindingResource,
-    BindingType, Buffer, BufferAddress, BufferSize, BufferUsages, Device, Face, FrontFace,
-    PolygonMode, PrimitiveState, PrimitiveTopology, SamplerBindingType, ShaderStages,
-    TextureSampleType, TextureViewDimension,
+    BindingType, Buffer, BufferAddress, BufferSize, BufferUsages, CompareFunction,
+    DepthStencilState, Device, Face, FrontFace, PolygonMode, PrimitiveState, PrimitiveTopology,
+    SamplerBindingType, ShaderStages, TextureFormat, TextureSampleType, TextureViewDimension,
 };
 use zerocopy::AsBytes;
 
@@ -274,6 +274,78 @@ impl PerInstanceDataProvider for UIElementRendererPerInstanceDataProvider {
                     ]
                     .as_bytes(),
                 );
+            }
+            semantic_inputs::KEY_SPRITE_UV_MIN => {
+                let sprite = if let Some(sprite) = &self.sprite {
+                    sprite
+                } else {
+                    return;
+                };
+
+                let uv_min = match sprite {
+                    UIElementSprite::Sprite(sprite) => {
+                        let mapping = sprite.mapping();
+                        [
+                            mapping.x_min as f32 / sprite.texture().width as f32,
+                            mapping.y_min as f32 / sprite.texture().height as f32,
+                        ]
+                    }
+                    UIElementSprite::NinePatch(nine_patch) => {
+                        let x = match instance {
+                            0 | 3 | 6 => nine_patch.mapping().x_min,
+                            1 | 4 | 7 => nine_patch.mapping().x_mid_left,
+                            2 | 5 | 8 => nine_patch.mapping().x_mid_right,
+                            _ => return,
+                        };
+                        let y = match instance {
+                            0 | 1 | 2 => nine_patch.mapping().y_mid_top,
+                            3 | 4 | 5 => nine_patch.mapping().y_mid_bottom,
+                            6 | 7 | 8 => nine_patch.mapping().y_min,
+                            _ => return,
+                        };
+                        [
+                            x as f32 / nine_patch.texture().width as f32,
+                            y as f32 / nine_patch.texture().height as f32,
+                        ]
+                    }
+                };
+                buffer.copy_from_slice(uv_min.as_bytes());
+            }
+            semantic_inputs::KEY_SPRITE_UV_MAX => {
+                let sprite = if let Some(sprite) = &self.sprite {
+                    sprite
+                } else {
+                    return;
+                };
+
+                let uv_min = match sprite {
+                    UIElementSprite::Sprite(sprite) => {
+                        let mapping = sprite.mapping();
+                        [
+                            mapping.x_max as f32 / sprite.texture().width as f32,
+                            mapping.y_max as f32 / sprite.texture().height as f32,
+                        ]
+                    }
+                    UIElementSprite::NinePatch(nine_patch) => {
+                        let x = match instance {
+                            0 | 3 | 6 => nine_patch.mapping().x_mid_left,
+                            1 | 4 | 7 => nine_patch.mapping().x_mid_right,
+                            2 | 5 | 8 => nine_patch.mapping().x_max,
+                            _ => return,
+                        };
+                        let y = match instance {
+                            0 | 1 | 2 => nine_patch.mapping().y_max,
+                            3 | 4 | 5 => nine_patch.mapping().y_mid_top,
+                            6 | 7 | 8 => nine_patch.mapping().y_mid_bottom,
+                            _ => return,
+                        };
+                        [
+                            x as f32 / nine_patch.texture().width as f32,
+                            y as f32 / nine_patch.texture().height as f32,
+                        ]
+                    }
+                };
+                buffer.copy_from_slice(uv_min.as_bytes());
             }
             semantic_inputs::KEY_SPRITE_COLOR => {
                 buffer.copy_from_slice(
