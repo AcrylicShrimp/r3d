@@ -43,5 +43,5 @@ fn get_window_refresh_rate_millihertz(window: &Window) -> u32 {
 }
 
 fn compute_target_frame_interval(target_frame_millihertz: impl Into<u64>) -> Duration {
-    Duration::from_millis(100_0000 / target_frame_millihertz.into())
+    Duration::from_millis(1000_000 / target_frame_millihertz.into())
 }
