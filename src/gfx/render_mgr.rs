@@ -1,7 +1,8 @@
 use super::{
-    build_rendering_command, BindGroupLayoutCache, CameraClearMode, DepthStencil, DepthStencilMode,
-    FrameBufferAllocator, GfxContextHandle, PipelineCache, PipelineLayoutCache, Renderer,
-    RenderingCommand, ShaderManager,
+    build_rendering_command, BindGroupLayoutCache, BindGroupProvider, CameraClearMode,
+    DepthStencil, DepthStencilMode, FrameBufferAllocator, GfxContextHandle,
+    PerInstanceDataProvider, PipelineCache, PipelineLayoutCache, Renderer, RenderingCommand,
+    ShaderManager,
 };
 use crate::object::{ObjectHierarchy, ObjectId};
 use std::sync::Arc;
@@ -121,6 +122,8 @@ impl RenderManager {
         object_id: ObjectId,
         object_hierarchy: &ObjectHierarchy,
         renderer: &'r mut dyn Renderer,
+        bind_group_provider: &'r dyn BindGroupProvider,
+        per_instance_data_provider: &dyn PerInstanceDataProvider,
         shader_mgr: &ShaderManager,
     ) -> Option<RenderingCommand<'r>> {
         build_rendering_command(
@@ -128,6 +131,8 @@ impl RenderManager {
             object_id,
             object_hierarchy,
             renderer,
+            bind_group_provider,
+            per_instance_data_provider,
             shader_mgr,
             &mut self.pipeline_cache,
             &mut self.frame_buffer_allocator,

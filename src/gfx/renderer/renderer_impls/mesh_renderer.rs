@@ -1,14 +1,15 @@
 use crate::gfx::{
     semantic_inputs::{KEY_NORMAL, KEY_POSITION, KEY_UV},
-    GenericBufferAllocation, HostBuffer, MaterialHandle, MeshHandle, PipelineProvider, Renderer,
-    RendererVertexBufferAttribute, RendererVertexBufferLayout, SemanticShaderInputKey,
+    BindGroupProvider, GenericBufferAllocation, HostBuffer, MaterialHandle, MeshHandle,
+    PerInstanceDataProvider, PipelineProvider, Renderer, RendererVertexBufferAttribute,
+    RendererVertexBufferLayout, SemanticShaderBindingKey, SemanticShaderInputKey,
 };
 use specs::{prelude::*, Component};
-use std::mem::size_of;
+use std::{mem::size_of, sync::Arc};
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    Buffer, BufferAddress, BufferSize, BufferUsages, CompareFunction, DepthStencilState, Device,
-    Face, FrontFace, PolygonMode, PrimitiveState, PrimitiveTopology, TextureFormat,
+    BindGroup, Buffer, BufferAddress, BufferSize, BufferUsages, CompareFunction, DepthStencilState,
+    Device, Face, FrontFace, PolygonMode, PrimitiveState, PrimitiveTopology, TextureFormat,
 };
 use zerocopy::AsBytes;
 
@@ -88,7 +89,7 @@ impl MeshRenderer {
 
         self.mesh = Some(mesh.clone());
 
-        let mut vertices = Vec::with_capacity(mesh.data.faces.len() * 3 * 2);
+        let mut vertices = Vec::with_capacity(mesh.data.faces.len() * 3 * (3 + 3 + 2));
         let uvs = mesh.data.texture_coords[0].as_ref().unwrap();
 
         for face in &mesh.data.faces {
@@ -116,14 +117,29 @@ impl MeshRenderer {
                 usage: BufferUsages::VERTEX,
             }),
             0,
-            BufferSize::new((mesh.data.faces.len() * 3 * size_of::<[f32; 8]>()) as u64).unwrap(),
+            BufferSize::new((size_of::<f32>() * vertices.len()) as u64).unwrap(),
         ));
+    }
+
+    pub fn bind_group_provider(&self) -> impl BindGroupProvider {
+        MeshRendererBindGroupProvider
+    }
+
+    pub fn per_instance_data_provider(&self) -> impl PerInstanceDataProvider {
+        MeshRendererPerInstanceDataProvider
     }
 }
 
 impl Renderer for MeshRenderer {
     fn pipeline_provider(&mut self) -> &mut PipelineProvider {
         &mut self.pipeline_provider
+    }
+
+    fn instance_count(&self) -> u32 {
+        match &self.mesh {
+            Some(_) => 1,
+            None => 0,
+        }
     }
 
     fn vertex_count(&self) -> u32 {
@@ -139,11 +155,24 @@ impl Renderer for MeshRenderer {
             None => Vec::new(),
         }
     }
+}
 
-    fn copy_semantic_per_instance_input(
+pub struct MeshRendererBindGroupProvider;
+
+impl BindGroupProvider for MeshRendererBindGroupProvider {
+    fn bind_group(&self, _instance: u32, _key: SemanticShaderBindingKey) -> Option<&BindGroup> {
+        None
+    }
+}
+
+pub struct MeshRendererPerInstanceDataProvider;
+
+impl PerInstanceDataProvider for MeshRendererPerInstanceDataProvider {
+    fn copy_per_instance_data(
         &self,
+        _instance: u32,
         _key: SemanticShaderInputKey,
-        _allocation: &mut GenericBufferAllocation<HostBuffer>,
+        _buffer: &mut GenericBufferAllocation<HostBuffer>,
     ) {
     }
 }

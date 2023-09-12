@@ -114,7 +114,14 @@ pub mod semantic_inputs {
         format: VertexFormat::Uint32x2,
         step_mode: VertexStepMode::Instance,
     };
-    pub const KEY_SPRITE_COLOR: SemanticShaderInputKey = SemanticShaderInputKey::new(203);
+    pub const KEY_SPRITE_OFFSET: SemanticShaderInputKey = SemanticShaderInputKey::new(203);
+    pub const SPRITE_OFFSET: SemanticShaderInput = SemanticShaderInput {
+        key: KEY_SPRITE_OFFSET,
+        name: "sprite_offset",
+        format: VertexFormat::Float32x2,
+        step_mode: VertexStepMode::Instance,
+    };
+    pub const KEY_SPRITE_COLOR: SemanticShaderInputKey = SemanticShaderInputKey::new(204);
     pub const SPRITE_COLOR: SemanticShaderInput = SemanticShaderInput {
         key: KEY_SPRITE_COLOR,
         name: "sprite_color",

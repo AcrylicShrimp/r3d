@@ -1,0 +1,12 @@
+[package]
+name = "r3d-editor"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+r3d = { path = ".." }
+
+pollster = { version = "0.3" }
+thiserror = { version = "1" }

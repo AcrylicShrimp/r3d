@@ -5,7 +5,6 @@ use crate::{transform::Transform, use_context};
 use specs::prelude::*;
 
 pub struct ObjectManager {
-    world: World,
     object_hierarchy: ObjectHierarchy,
     object_name_registry: ObjectNameRegistry,
     object_id_allocator: ObjectIdAllocator,
@@ -13,25 +12,11 @@ pub struct ObjectManager {
 
 impl ObjectManager {
     pub fn new() -> Self {
-        let mut world = World::new();
-
-        world.register::<Object>();
-        world.register::<Transform>();
-
         Self {
-            world,
             object_hierarchy: ObjectHierarchy::new(),
             object_name_registry: ObjectNameRegistry::new(),
             object_id_allocator: ObjectIdAllocator::new(),
         }
-    }
-
-    pub fn world(&self) -> &World {
-        &self.world
-    }
-
-    pub fn world_mut(&mut self) -> &mut World {
-        &mut self.world
     }
 
     pub fn object_name_registry(&self) -> &ObjectNameRegistry {
@@ -72,17 +57,18 @@ impl ObjectManager {
             .unwrap_or_default()
     }
 
-    pub fn create_object_builder(
+    pub fn create_object_builder<'w>(
         &mut self,
-        name: Option<String>,
+        world: &'w mut World,
+        name: impl Into<Option<String>>,
         transform: Option<Transform>,
-    ) -> (ObjectHandle, EntityBuilder) {
+    ) -> (ObjectHandle, EntityBuilder<'w>) {
         let object_id = self.object_id_allocator.alloc();
-        let builder = self.world.create_entity();
+        let builder = world.create_entity();
         let entity = builder.entity;
 
         self.object_hierarchy.add(object_id, entity);
-        self.object_name_registry.set_name(object_id, name);
+        self.object_name_registry.set_name(object_id, name.into());
 
         let object_handle = ObjectHandle::new(use_context().clone(), entity, object_id);
 
@@ -95,17 +81,12 @@ impl ObjectManager {
     }
 
     pub fn remove_object(&mut self, handle: &ObjectHandle) {
-        self.world.delete_entity(handle.entity).unwrap();
+        use_context()
+            .world_mut()
+            .delete_entity(handle.entity)
+            .unwrap();
         self.object_hierarchy.remove(handle.object_id);
         self.object_id_allocator.dealloc(handle.object_id);
         self.object_name_registry.set_name(handle.object_id, None);
-    }
-
-    pub fn split(&self) -> (&World, &ObjectHierarchy) {
-        (&self.world, &self.object_hierarchy)
-    }
-
-    pub fn split_mut(&mut self) -> (&mut World, &mut ObjectHierarchy) {
-        (&mut self.world, &mut self.object_hierarchy)
     }
 }

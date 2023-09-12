@@ -10,10 +10,11 @@ use self::{
     vsync::TargetFrameInterval,
 };
 use codegen::Handle;
+use ecs_system::{update_ui_element::UpdateUIElement, update_ui_scaler::UpdateUIScaler};
 use event::{event_types, EventManager};
-use gfx::{GlyphManager, MeshRenderer};
+use gfx::{GlyphManager, MeshRenderer, UIElementRenderer};
 use input::InputManager;
-use object::ObjectManager;
+use object::{Object, ObjectManager};
 use specs::prelude::*;
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -23,6 +24,7 @@ use std::{
 };
 use thiserror::Error;
 use transform::Transform;
+use ui::{UIElement, UIScaler, UISize};
 use winit::{
     dpi::{LogicalSize, PhysicalSize},
     event::{Event, WindowEvent},
@@ -38,6 +40,7 @@ pub mod math;
 pub mod object;
 pub mod time;
 pub mod transform;
+pub mod ui;
 pub mod vsync;
 
 // re-exports.
@@ -58,10 +61,11 @@ pub fn use_context() -> &'static ContextHandle {
 pub struct Context {
     window: Window,
     gfx_ctx: GfxContextHandle,
-    glyph_mgr: RefCell<GlyphManager>,
+    world: RefCell<World>,
     object_mgr: RefCell<ObjectManager>,
     screen_mgr: RefCell<ScreenManager>,
     render_mgr: RefCell<RenderManager>,
+    glyph_mgr: RefCell<GlyphManager>,
     shader_mgr: ShaderManager,
     time_mgr: RefCell<TimeManager>,
     input_mgr: RefCell<InputManager>,
@@ -71,7 +75,7 @@ pub struct Context {
 impl Context {
     pub fn new(window: Window, gfx_ctx: GfxContext, screen_width: u32, screen_height: u32) -> Self {
         let gfx_ctx = GfxContextHandle::new(gfx_ctx);
-        let glyph_mgr = GlyphManager::new(gfx_ctx.clone()).into();
+        let world = World::new().into();
         let object_mgr = ObjectManager::new().into();
         let screen_mgr = ScreenManager::new(screen_width, screen_height).into();
         let render_mgr = RenderManager::new(
@@ -80,6 +84,7 @@ impl Context {
             DepthStencilMode::DepthOnly,
         )
         .into();
+        let glyph_mgr = GlyphManager::new(gfx_ctx.clone()).into();
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
         let time_mgr = TimeManager::new().into();
         let input_mgr = InputManager::new().into();
@@ -88,10 +93,11 @@ impl Context {
         Self {
             window,
             gfx_ctx,
-            glyph_mgr,
+            world,
             object_mgr,
             screen_mgr,
             render_mgr,
+            glyph_mgr,
             shader_mgr,
             time_mgr,
             input_mgr,
@@ -107,12 +113,12 @@ impl Context {
         &self.gfx_ctx
     }
 
-    pub fn glyph_mgr(&self) -> Ref<GlyphManager> {
-        self.glyph_mgr.borrow()
+    pub fn world(&self) -> Ref<World> {
+        self.world.borrow()
     }
 
-    pub fn glyph_mgr_mut(&self) -> RefMut<GlyphManager> {
-        self.glyph_mgr.borrow_mut()
+    pub fn world_mut(&self) -> RefMut<World> {
+        self.world.borrow_mut()
     }
 
     pub fn object_mgr(&self) -> Ref<ObjectManager> {
@@ -137,6 +143,14 @@ impl Context {
 
     pub fn render_mgr_mut(&self) -> RefMut<RenderManager> {
         self.render_mgr.borrow_mut()
+    }
+
+    pub fn glyph_mgr(&self) -> Ref<GlyphManager> {
+        self.glyph_mgr.borrow()
+    }
+
+    pub fn glyph_mgr_mut(&self) -> RefMut<GlyphManager> {
+        self.glyph_mgr.borrow_mut()
     }
 
     pub fn shader_mgr(&self) -> &ShaderManager {
@@ -187,10 +201,17 @@ impl Engine {
         }
 
         {
-            let mut world_mgr = ctx.object_mgr_mut();
-            let world = world_mgr.world_mut();
+            let mut world = ctx.world_mut();
+            world.register::<Object>();
+            world.register::<Transform>();
+
             world.register::<Camera>();
             world.register::<MeshRenderer>();
+            world.register::<UIElementRenderer>();
+
+            world.register::<UISize>();
+            world.register::<UIScaler>();
+            world.register::<UIElement>();
         }
 
         {
@@ -214,6 +235,8 @@ impl Engine {
         loop_mode: EngineLoopMode,
         target_fps: EngineTargetFps,
     ) -> Result<(), EngineExecError> {
+        let mut update_ui_scaler = UpdateUIScaler::new(self.ctx.clone());
+        let mut update_ui_element = UpdateUIElement::new(self.ctx.clone());
         let mut update_camera_transform_buffer_system =
             UpdateCameraTransformBufferSystem::new(self.ctx.clone());
         let mut render_system = RenderSystem::new();
@@ -264,19 +287,26 @@ impl Engine {
 
                     self.ctx.event_mgr().dispatch(&event_types::Update);
 
+                    update_ui_scaler.run_now(&self.ctx.world());
+                    update_ui_element.run_now(&self.ctx.world());
+
                     {
-                        let mut world_mgr = self.ctx.object_mgr_mut();
-                        let (world, object_hierarchy) = world_mgr.split_mut();
+                        let world = self.ctx.world();
+                        let mut object_mgr = self.ctx.object_mgr_mut();
+                        let object_hierarchy = object_mgr.object_hierarchy_mut();
+
                         let transforms = world.read_component::<Transform>();
                         object_hierarchy.update_object_matrices(|entity| transforms.get(entity));
                     }
+
+                    self.ctx.event_mgr().dispatch(&event_types::LateUpdate);
 
                     if window_occluded {
                         return;
                     }
 
-                    update_camera_transform_buffer_system.run_now(&self.ctx.object_mgr().world());
-                    render_system.run_now(&self.ctx.object_mgr().world());
+                    update_camera_transform_buffer_system.run_now(&self.ctx.world());
+                    render_system.run_now(&self.ctx.world());
 
                     return;
                 }
@@ -290,10 +320,29 @@ impl Engine {
                         time_mgr.update();
                     }
 
+                    {
+                        let mut input_mgr = self.ctx.input_mgr_mut();
+                        input_mgr.poll();
+                    }
+
                     self.ctx.event_mgr().dispatch(&event_types::Update);
 
-                    update_camera_transform_buffer_system.run_now(&self.ctx.object_mgr().world());
-                    render_system.run_now(&self.ctx.object_mgr().world());
+                    update_ui_scaler.run_now(&self.ctx.world());
+                    update_ui_element.run_now(&self.ctx.world());
+
+                    {
+                        let world = self.ctx.world();
+                        let mut object_mgr = self.ctx.object_mgr_mut();
+                        let object_hierarchy = object_mgr.object_hierarchy_mut();
+
+                        let transforms = world.read_component::<Transform>();
+                        object_hierarchy.update_object_matrices(|entity| transforms.get(entity));
+                    }
+
+                    self.ctx.event_mgr().dispatch(&event_types::LateUpdate);
+
+                    update_camera_transform_buffer_system.run_now(&self.ctx.world());
+                    render_system.run_now(&self.ctx.world());
 
                     return;
                 }

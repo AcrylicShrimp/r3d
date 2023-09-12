@@ -122,6 +122,10 @@ impl ObjectHierarchy {
         &self.object_entities
     }
 
+    pub fn index(&self, object: ObjectId) -> u32 {
+        self.object_spans[object.get() as usize].index
+    }
+
     pub fn entity(&self, object: ObjectId) -> Entity {
         self.object_entities[self.object_spans[object.get() as usize].index as usize]
     }

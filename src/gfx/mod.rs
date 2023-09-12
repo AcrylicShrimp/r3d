@@ -16,11 +16,11 @@ mod font;
 mod glyph;
 mod material;
 mod mesh;
+mod nine_patch;
 mod render_mgr;
 mod renderer;
 mod screen_mgr;
 mod sprite;
-mod sprite_texel_mapping;
 mod texture;
 
 pub use camera::*;
@@ -30,11 +30,11 @@ pub use font::*;
 pub use glyph::*;
 pub use material::*;
 pub use mesh::*;
+pub use nine_patch::*;
 pub use render_mgr::*;
 pub use renderer::*;
 pub use screen_mgr::*;
 pub use sprite::*;
-pub use sprite_texel_mapping::*;
 pub use texture::*;
 
 #[derive(Error, Debug)]
