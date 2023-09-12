@@ -1,17 +1,55 @@
 use crate::{
-    gfx::{Camera, MeshRenderer, Renderer, UIElementRenderer},
+    gfx::{BindGroupLayoutCache, Camera, MeshRenderer, Renderer, UIElementRenderer},
     math::Vec2,
     object::Object,
     ui::UISize,
     use_context,
 };
+use image::EncodableLayout;
 use specs::prelude::*;
+use std::mem::size_of;
+use wgpu::{
+    BindGroup, BindGroupDescriptor, BindGroupLayoutEntry, BindingType, Buffer, BufferAddress,
+    BufferBindingType, BufferDescriptor, BufferSize, BufferUsages, Device, ShaderStages,
+};
 
-pub struct RenderSystem;
+pub struct RenderSystem {
+    screen_size_buffer: Buffer,
+    screen_size_bind_group: BindGroup,
+}
 
 impl RenderSystem {
-    pub fn new() -> Self {
-        Self
+    pub fn new(device: &Device, bind_group_layout_cache: &mut BindGroupLayoutCache) -> Self {
+        let screen_size_buffer = device.create_buffer(&BufferDescriptor {
+            label: None,
+            size: size_of::<[f32; 4]>() as u64 as BufferAddress,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let screen_size_bind_group_layout =
+            bind_group_layout_cache.create_layout(vec![BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::VERTEX_FRAGMENT,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: Some(BufferSize::new(size_of::<[f32; 4]>() as u64).unwrap()),
+                },
+                count: None,
+            }]);
+        let screen_size_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: None,
+            layout: screen_size_bind_group_layout.as_ref(),
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: screen_size_buffer.as_entire_binding(),
+            }],
+        });
+
+        Self {
+            screen_size_buffer,
+            screen_size_bind_group,
+        }
     }
 }
 
@@ -33,6 +71,20 @@ impl<'a> System<'a> for RenderSystem {
         let shader_mgr = context.shader_mgr();
         let world_mgr = context.object_mgr();
         let object_hierarchy = world_mgr.object_hierarchy();
+
+        context
+            .gfx_ctx()
+            .queue
+            .write_buffer(&self.screen_size_buffer, 0, {
+                let screen_mgr = context.screen_mgr();
+                [
+                    screen_mgr.width() as f32,
+                    screen_mgr.height() as f32,
+                    0.0f32,
+                    0.0f32,
+                ]
+                .as_bytes()
+            });
 
         let surface_texture = context.gfx_ctx().surface.get_current_texture().unwrap();
         let surface_texture_view = surface_texture.texture.create_view(&Default::default());
@@ -117,7 +169,6 @@ impl<'a> System<'a> for RenderSystem {
                 };
 
                 if let Some(cmd) = render_mgr.build_rendering_command(
-                    camera.bind_group.clone(),
                     object_id,
                     object_hierarchy,
                     renderer,
@@ -138,7 +189,11 @@ impl<'a> System<'a> for RenderSystem {
                 .unwrap();
 
             for cmd in &commands {
-                cmd.render(&mut render_pass);
+                cmd.render(
+                    &mut render_pass,
+                    &camera.bind_group,
+                    &self.screen_size_bind_group,
+                );
             }
         }
 

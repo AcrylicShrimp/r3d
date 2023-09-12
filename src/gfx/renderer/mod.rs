@@ -5,7 +5,6 @@ use super::{
 };
 use crate::object::{ObjectHierarchy, ObjectId};
 use parking_lot::RwLockReadGuard;
-use std::sync::Arc;
 use wgpu::{BindGroup, Buffer, BufferAddress, RenderPass, VertexStepMode};
 use zerocopy::AsBytes;
 
@@ -31,13 +30,17 @@ pub struct RenderingCommand<'r> {
     pub instance_count: u32,
     pub vertex_count: u32,
     pub bind_group_provider: &'r dyn BindGroupProvider,
-    pub camera_transform_bind_group: Arc<BindGroup>,
     pub per_vertex_buffers: Vec<GenericBufferAllocation<Buffer>>,
     pub per_instance_buffer: Option<GenericBufferAllocation<Buffer>>,
 }
 
 impl<'r> RenderingCommand<'r> {
-    pub fn render(&'r self, render_pass: &mut RenderPass<'r>) {
+    pub fn render(
+        &'r self,
+        render_pass: &mut RenderPass<'r>,
+        camera_transform_bind_group: &'r BindGroup,
+        screen_size_bind_group: &'r BindGroup,
+    ) {
         render_pass.set_pipeline(self.pipeline.as_ref());
 
         for binding in &self.material.shader.reflected_shader.bindings {
@@ -49,22 +52,16 @@ impl<'r> RenderingCommand<'r> {
 
             match key {
                 semantic_bindings::KEY_CAMERA_TRANSFORM => {
-                    render_pass.set_bind_group(
-                        binding.group,
-                        &self.camera_transform_bind_group,
-                        &[],
-                    );
+                    render_pass.set_bind_group(binding.group, camera_transform_bind_group, &[]);
+                }
+                semantic_bindings::KEY_SCREEN_SIZE => {
+                    render_pass.set_bind_group(binding.group, screen_size_bind_group, &[]);
                 }
                 _ => {
                     if let Some(bind_group) = self.bind_group_provider.bind_group(0, key) {
                         render_pass.set_bind_group(binding.group, &bind_group, &[]);
                     }
                 }
-            }
-
-            if binding.semantic_binding == Some(semantic_bindings::KEY_CAMERA_TRANSFORM) {
-                render_pass.set_bind_group(binding.group, &self.camera_transform_bind_group, &[]);
-                continue;
             }
         }
 
@@ -89,7 +86,6 @@ impl<'r> RenderingCommand<'r> {
 }
 
 pub fn build_rendering_command<'r>(
-    camera_transform_bind_group: Arc<BindGroup>,
     object_id: ObjectId,
     object_hierarchy: &ObjectHierarchy,
     renderer: &'r mut dyn Renderer,
@@ -173,7 +169,6 @@ pub fn build_rendering_command<'r>(
         pipeline,
         instance_count,
         vertex_count: renderer.vertex_count(),
-        camera_transform_bind_group,
         bind_group_provider,
         per_vertex_buffers: renderer.vertex_buffers(),
         per_instance_buffer,
