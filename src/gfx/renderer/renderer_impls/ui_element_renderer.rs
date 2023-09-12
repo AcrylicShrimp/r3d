@@ -75,7 +75,13 @@ impl UIElementRenderer {
             polygon_mode: PolygonMode::Fill,
             conservative: false,
         });
-        pipeline_provider.set_depth_stencil(None);
+        pipeline_provider.set_depth_stencil(Some(DepthStencilState {
+            format: TextureFormat::Depth32Float,
+            depth_write_enabled: false,
+            depth_compare: CompareFunction::Always,
+            stencil: Default::default(),
+            bias: Default::default(),
+        }));
 
         Self {
             mask: 0xFFFF_FFFF,
