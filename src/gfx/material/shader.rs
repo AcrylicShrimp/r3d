@@ -31,6 +31,19 @@ pub mod semantic_bindings {
         },
         count: None,
     };
+    pub const KEY_SCREEN_SIZE: SemanticShaderBindingKey = SemanticShaderBindingKey::new(2);
+    pub const SCREEN_SIZE: SemanticShaderBinding = SemanticShaderBinding {
+        key: KEY_SCREEN_SIZE,
+        name: "screen_size",
+        ty: BindingType::Buffer {
+            ty: BufferBindingType::Uniform,
+            has_dynamic_offset: false,
+            min_binding_size: Some(unsafe {
+                NonZeroU64::new_unchecked(size_of::<[f32; 2 + 2]>() as u64)
+            }),
+        },
+        count: None,
+    };
 
     pub const KEY_SPRITE_TEXTURE: SemanticShaderBindingKey = SemanticShaderBindingKey::new(101);
     pub const SPRITE_TEXTURE: SemanticShaderBinding = SemanticShaderBinding {
@@ -107,21 +120,35 @@ pub mod semantic_inputs {
         step_mode: VertexStepMode::Instance,
     };
 
-    pub const KEY_SPRITE_SIZE: SemanticShaderInputKey = SemanticShaderInputKey::new(202);
+    pub const KEY_SPRITE_SIZE: SemanticShaderInputKey = SemanticShaderInputKey::new(201);
     pub const SPRITE_SIZE: SemanticShaderInput = SemanticShaderInput {
         key: KEY_SPRITE_SIZE,
         name: "sprite_size",
-        format: VertexFormat::Uint32x2,
+        format: VertexFormat::Float32x2,
         step_mode: VertexStepMode::Instance,
     };
-    pub const KEY_SPRITE_OFFSET: SemanticShaderInputKey = SemanticShaderInputKey::new(203);
+    pub const KEY_SPRITE_OFFSET: SemanticShaderInputKey = SemanticShaderInputKey::new(202);
     pub const SPRITE_OFFSET: SemanticShaderInput = SemanticShaderInput {
         key: KEY_SPRITE_OFFSET,
         name: "sprite_offset",
         format: VertexFormat::Float32x2,
         step_mode: VertexStepMode::Instance,
     };
-    pub const KEY_SPRITE_COLOR: SemanticShaderInputKey = SemanticShaderInputKey::new(204);
+    pub const KEY_SPRITE_UV_MIN: SemanticShaderInputKey = SemanticShaderInputKey::new(203);
+    pub const SPRITE_UV_MIN: SemanticShaderInput = SemanticShaderInput {
+        key: KEY_SPRITE_UV_MIN,
+        name: "sprite_uv_min",
+        format: VertexFormat::Float32x2,
+        step_mode: VertexStepMode::Instance,
+    };
+    pub const KEY_SPRITE_UV_MAX: SemanticShaderInputKey = SemanticShaderInputKey::new(204);
+    pub const SPRITE_UV_MAX: SemanticShaderInput = SemanticShaderInput {
+        key: KEY_SPRITE_UV_MAX,
+        name: "sprite_uv_max",
+        format: VertexFormat::Float32x2,
+        step_mode: VertexStepMode::Instance,
+    };
+    pub const KEY_SPRITE_COLOR: SemanticShaderInputKey = SemanticShaderInputKey::new(205);
     pub const SPRITE_COLOR: SemanticShaderInput = SemanticShaderInput {
         key: KEY_SPRITE_COLOR,
         name: "sprite_color",
@@ -228,6 +255,7 @@ impl ShaderManager {
         };
 
         this.register_binding(semantic_bindings::CAMERA_TRANSFORM);
+        this.register_binding(semantic_bindings::SCREEN_SIZE);
         this.register_binding(semantic_bindings::SPRITE_TEXTURE);
         this.register_binding(semantic_bindings::SPRITE_SAMPLER);
 
@@ -239,6 +267,9 @@ impl ShaderManager {
         this.register_input(semantic_inputs::TRANSFORM_ROW_2);
         this.register_input(semantic_inputs::TRANSFORM_ROW_3);
         this.register_input(semantic_inputs::SPRITE_SIZE);
+        this.register_input(semantic_inputs::SPRITE_OFFSET);
+        this.register_input(semantic_inputs::SPRITE_UV_MIN);
+        this.register_input(semantic_inputs::SPRITE_UV_MAX);
         this.register_input(semantic_inputs::SPRITE_COLOR);
 
         this.register_output(semantic_outputs::COLOR);
