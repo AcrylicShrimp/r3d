@@ -27,7 +27,7 @@ use std::{
 };
 use thiserror::Error;
 use transform::Transform;
-use ui::{UIElement, UIScaler, UISize};
+use ui::{UIElement, UIRaycastManager, UIScaler, UISize};
 use winit::{
     dpi::{LogicalSize, PhysicalSize},
     event::{Event, WindowEvent},
@@ -70,6 +70,7 @@ pub struct Context {
     render_mgr: RefCell<RenderManager>,
     glyph_mgr: RefCell<GlyphManager>,
     shader_mgr: ShaderManager,
+    ui_raycast_mgr: RefCell<UIRaycastManager>,
     time_mgr: RefCell<TimeManager>,
     input_mgr: RefCell<InputManager>,
     event_mgr: EventManager,
@@ -89,6 +90,7 @@ impl Context {
         .into();
         let glyph_mgr = GlyphManager::new(gfx_ctx.clone()).into();
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
+        let ui_raycast_mgr = UIRaycastManager::new().into();
         let time_mgr = TimeManager::new().into();
         let input_mgr = InputManager::new().into();
         let event_mgr = EventManager::new();
@@ -102,6 +104,7 @@ impl Context {
             render_mgr,
             glyph_mgr,
             shader_mgr,
+            ui_raycast_mgr,
             time_mgr,
             input_mgr,
             event_mgr,
@@ -158,6 +161,14 @@ impl Context {
 
     pub fn shader_mgr(&self) -> &ShaderManager {
         &self.shader_mgr
+    }
+
+    pub fn ui_raycast_mgr(&self) -> Ref<UIRaycastManager> {
+        self.ui_raycast_mgr.borrow()
+    }
+
+    pub fn ui_raycast_mgr_mut(&self) -> RefMut<UIRaycastManager> {
+        self.ui_raycast_mgr.borrow_mut()
     }
 
     pub fn time_mgr(&self) -> Ref<TimeManager> {
