@@ -1,6 +1,7 @@
 use super::{ObjectComponent, ObjectId};
 use crate::ContextHandle;
 use specs::Entity;
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone)]
 pub struct ObjectHandle {
@@ -119,3 +120,9 @@ impl PartialEq for ObjectHandle {
 }
 
 impl Eq for ObjectHandle {}
+
+impl Hash for ObjectHandle {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.object_id.hash(state);
+    }
+}
