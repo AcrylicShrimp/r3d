@@ -45,6 +45,13 @@ impl ObjectHandle {
             .cloned()
     }
 
+    pub fn index(&self) -> u32 {
+        self.ctx
+            .object_mgr()
+            .object_hierarchy()
+            .index(self.object_id)
+    }
+
     pub fn parent(&self) -> Option<Self> {
         self.ctx
             .object_mgr()
