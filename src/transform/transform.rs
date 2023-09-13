@@ -27,13 +27,55 @@ impl Transform {
     }
 
     /// Returns the transform matrix that transforms from local space to world space.
+    /// This matrix does not include the parent transforms.
     pub fn matrix(&self) -> Mat4 {
         Mat4::srt(self.position, self.rotation, self.scale)
     }
 
     /// Returns the inverse transform matrix that transforms from world space to local space.
+    /// This matrix does not include the parent transforms.
     pub fn inverse_matrix(&self) -> Mat4 {
         Mat4::trs(-self.position, -self.rotation, Vec3::recip(self.scale))
+    }
+
+    /// Returns the transform matrix that transforms from local space to world space.
+    /// This matrix includes the parent transforms.
+    pub fn world_matrix(
+        &self,
+        object_id: ObjectId,
+        hierarchy: &ObjectHierarchy,
+        transforms: &ReadStorage<Transform>,
+    ) -> Mat4 {
+        let mut matrix = self.matrix();
+
+        for &parent_id in hierarchy.parents(object_id) {
+            let parent_entity = hierarchy.entity(parent_id);
+            if let Some(parent_transform) = transforms.get(parent_entity) {
+                matrix *= parent_transform.matrix();
+            }
+        }
+
+        matrix
+    }
+
+    /// Returns the inverse transform matrix that transforms from world space to local space.
+    /// This matrix includes the parent transforms.
+    pub fn world_inverse_matrix(
+        &self,
+        object_id: ObjectId,
+        hierarchy: &ObjectHierarchy,
+        transforms: &ReadStorage<Transform>,
+    ) -> Mat4 {
+        let mut matrix = Mat4::identity();
+
+        for &parent_id in hierarchy.parents(object_id).iter().rev() {
+            let parent_entity = hierarchy.entity(parent_id);
+            if let Some(parent_transform) = transforms.get(parent_entity) {
+                matrix *= parent_transform.inverse_matrix();
+            }
+        }
+
+        matrix * self.inverse_matrix()
     }
 
     /// Returns the world position of the given object.
@@ -254,6 +296,7 @@ impl ObjectComponent for TransformComponent {
 
 impl TransformComponent {
     /// Returns the transform matrix that transforms from local space to world space.
+    /// This matrix does not include the parent transforms.
     pub fn matrix(&self) -> Mat4 {
         let world = self.object.ctx.world();
         let transforms = world.read_component::<Transform>();
@@ -261,10 +304,39 @@ impl TransformComponent {
     }
 
     /// Returns the inverse transform matrix that transforms from world space to local space.
+    /// This matrix does not include the parent transforms.
     pub fn inverse_matrix(&self) -> Mat4 {
         let world = self.object.ctx.world();
         let transforms = world.read_component::<Transform>();
         transforms.get(self.object.entity).unwrap().inverse_matrix()
+    }
+
+    /// Returns the transform matrix that transforms from local space to world space.
+    /// This matrix includes the parent transforms.
+    pub fn world_matrix(&self) -> Mat4 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let hierarchy = object_mgr.object_hierarchy();
+        let world = self.object.ctx.world();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .world_matrix(object_id, &hierarchy, &transforms)
+    }
+
+    /// Returns the inverse transform matrix that transforms from world space to local space.
+    /// This matrix includes the parent transforms.
+    pub fn world_inverse_matrix(&self) -> Mat4 {
+        let object_id = self.object.object_id;
+        let object_mgr = self.object.ctx.object_mgr();
+        let hierarchy = object_mgr.object_hierarchy();
+        let world = self.object.ctx.world();
+        let transforms = world.read_component::<Transform>();
+        transforms
+            .get(self.object.entity)
+            .unwrap()
+            .world_inverse_matrix(object_id, &hierarchy, &transforms)
     }
 
     /// Returns the local position of the given object.
