@@ -1,6 +1,8 @@
+use crate::{
+    math::Vec2,
+    object::{ObjectComponent, ObjectHandle},
+};
 use specs::{prelude::*, Component};
-
-use crate::math::Vec2;
 
 #[derive(Debug, Clone, Component)]
 #[storage(HashMapStorage)]
@@ -26,5 +28,37 @@ impl UISize {
 
     pub fn to_vec2(&self) -> Vec2 {
         Vec2::new(self.width, self.height)
+    }
+}
+
+pub struct UISizeComponent {
+    object: ObjectHandle,
+}
+
+impl ObjectComponent for UISizeComponent {
+    type Component = UISize;
+
+    fn new(object: ObjectHandle) -> Self {
+        Self { object }
+    }
+
+    fn object(&self) -> &ObjectHandle {
+        &self.object
+    }
+}
+
+impl UISizeComponent {
+    pub fn size(&self) -> Vec2 {
+        let world = self.object.ctx.world();
+        let ui_sizes = world.read_storage::<UISize>();
+        ui_sizes.get(self.object.entity).unwrap().to_vec2()
+    }
+
+    pub fn set_size(&self, width: f32, height: f32) {
+        let world = self.object.ctx.world();
+        let mut ui_sizes = world.write_storage::<UISize>();
+        let ui_size = ui_sizes.get_mut(self.object.entity).unwrap();
+        ui_size.width = width;
+        ui_size.height = height;
     }
 }
