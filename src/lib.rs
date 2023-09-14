@@ -15,7 +15,7 @@ use ecs_system::{
     update_ui_scaler::UpdateUIScaler,
 };
 use event::{event_types, EventManager};
-use gfx::{GlyphManager, MeshRenderer, UIElementRenderer};
+use gfx::{GlyphManager, MeshRenderer, UIElementRenderer, UITextRenderer};
 use input::InputManager;
 use object::{Object, ObjectManager};
 use specs::prelude::*;
@@ -222,6 +222,7 @@ impl Engine {
             world.register::<Camera>();
             world.register::<MeshRenderer>();
             world.register::<UIElementRenderer>();
+            world.register::<UITextRenderer>();
 
             world.register::<UISize>();
             world.register::<UIScaler>();

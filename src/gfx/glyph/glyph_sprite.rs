@@ -1,15 +1,36 @@
 use crate::gfx::{SpriteTexelMapping, TextureHandle};
-use std::fmt::Display;
+use std::sync::Arc;
+use wgpu::BindGroup;
 
 #[derive(Clone)]
 pub struct GlyphSprite {
+    texture_bind_group: Arc<BindGroup>,
+    sampler_bind_group: Arc<BindGroup>,
     texture: TextureHandle,
     mapping: SpriteTexelMapping,
 }
 
 impl GlyphSprite {
-    pub fn new(texture: TextureHandle, mapping: SpriteTexelMapping) -> Self {
-        Self { texture, mapping }
+    pub fn new(
+        texture_bind_group: Arc<BindGroup>,
+        sampler_bind_group: Arc<BindGroup>,
+        texture: TextureHandle,
+        mapping: SpriteTexelMapping,
+    ) -> Self {
+        Self {
+            texture_bind_group,
+            sampler_bind_group,
+            texture,
+            mapping,
+        }
+    }
+
+    pub fn texture_bind_group(&self) -> &Arc<BindGroup> {
+        &self.texture_bind_group
+    }
+
+    pub fn sampler_bind_group(&self) -> &Arc<BindGroup> {
+        &self.sampler_bind_group
     }
 
     pub fn texture(&self) -> &TextureHandle {
@@ -26,11 +47,5 @@ impl GlyphSprite {
 
     pub fn height(&self) -> u32 {
         self.mapping.height() as u32
-    }
-}
-
-impl Display for GlyphSprite {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "GlyphSprite({}x{})", self.width(), self.height())
     }
 }

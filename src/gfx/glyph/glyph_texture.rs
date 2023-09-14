@@ -1,11 +1,15 @@
-use crate::gfx::{FontHandle, SpriteTexelMapping, Texture, TextureHandle};
-use std::cmp::max;
+use crate::gfx::{BindGroupLayoutCache, FontHandle, SpriteTexelMapping, Texture, TextureHandle};
+use std::{cmp::max, sync::Arc};
 use wgpu::{
-    Device, Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, Queue, TextureAspect,
-    TextureFormat,
+    BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutEntry, BindingResource,
+    BindingType, Device, Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, Queue,
+    SamplerBindingType, ShaderStages, TextureAspect, TextureFormat, TextureSampleType,
+    TextureViewDimension,
 };
 
 pub struct GlyphTexture {
+    texture_bind_group: Arc<BindGroup>,
+    sampler_bind_group: Arc<BindGroup>,
     texture: TextureHandle,
     font: FontHandle,
     offset_x: u16,
@@ -14,19 +18,68 @@ pub struct GlyphTexture {
 }
 
 impl GlyphTexture {
-    pub fn new(device: &Device, font: FontHandle) -> Self {
+    pub fn new(
+        device: &Device,
+        bind_group_layout_cache: &mut BindGroupLayoutCache,
+        font: FontHandle,
+    ) -> Self {
+        let texture = Texture::create_empty(2048u16, 2048u16, TextureFormat::R8Unorm, device);
+        let texture_bind_group_layout =
+            bind_group_layout_cache.create_layout(vec![BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::VERTEX_FRAGMENT,
+                ty: BindingType::Texture {
+                    sample_type: TextureSampleType::Float { filterable: true },
+                    view_dimension: TextureViewDimension::D2,
+                    multisampled: false,
+                },
+                count: None,
+            }]);
+        let sampler_bind_group_layout =
+            bind_group_layout_cache.create_layout(vec![BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::VERTEX_FRAGMENT,
+                ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                count: None,
+            }]);
+        let texture_bind_group = device
+            .create_bind_group(&BindGroupDescriptor {
+                label: None,
+                layout: texture_bind_group_layout.as_ref(),
+                entries: &[BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::TextureView(&texture.view),
+                }],
+            })
+            .into();
+        let sampler_bind_group = device
+            .create_bind_group(&BindGroupDescriptor {
+                label: None,
+                layout: sampler_bind_group_layout.as_ref(),
+                entries: &[BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::Sampler(&texture.sampler),
+                }],
+            })
+            .into();
+
         Self {
-            texture: TextureHandle::new(Texture::create_empty(
-                2048u16,
-                2048u16,
-                TextureFormat::R8Unorm,
-                device,
-            )),
+            texture_bind_group,
+            sampler_bind_group,
+            texture: TextureHandle::new(texture),
             font,
             offset_x: 0,
             offset_y: 0,
             line_height: 0,
         }
+    }
+
+    pub fn texture_bind_group(&self) -> &Arc<BindGroup> {
+        &self.texture_bind_group
+    }
+
+    pub fn sampler_bind_group(&self) -> &Arc<BindGroup> {
+        &self.sampler_bind_group
     }
 
     pub fn font(&self) -> &FontHandle {

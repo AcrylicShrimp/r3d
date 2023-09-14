@@ -1,5 +1,8 @@
 use super::{generate_sdf, GlyphSprite, GlyphTexture};
-use crate::gfx::{Font, FontHandle, GfxContextHandle};
+use crate::{
+    gfx::{Font, FontHandle, GfxContextHandle},
+    use_context,
+};
 use fontdue::layout::GlyphRasterConfig;
 use std::collections::HashMap;
 
@@ -44,13 +47,23 @@ impl GlyphManager {
                 ) {
                     self.glyphs.insert(
                         glyph,
-                        GlyphSprite::new(glyph_texture.texture().clone(), mapping),
+                        GlyphSprite::new(
+                            glyph_texture.texture_bind_group().clone(),
+                            glyph_texture.sampler_bind_group().clone(),
+                            glyph_texture.texture().clone(),
+                            mapping,
+                        ),
                     );
                     return self.glyphs.get(&glyph).unwrap();
                 }
             }
 
-            let mut glyph_texture = GlyphTexture::new(&self.gfx_ctx.device, font.clone());
+            let ctx = use_context();
+            let mut glyph_texture = GlyphTexture::new(
+                &ctx.gfx_ctx.device,
+                ctx.render_mgr_mut().bind_group_layout_cache(),
+                font.clone(),
+            );
             let mapping = glyph_texture
                 .glyph(
                     &self.gfx_ctx.queue,
@@ -61,7 +74,12 @@ impl GlyphManager {
                 .unwrap();
             self.glyphs.insert(
                 glyph,
-                GlyphSprite::new(glyph_texture.texture().clone(), mapping),
+                GlyphSprite::new(
+                    glyph_texture.texture_bind_group().clone(),
+                    glyph_texture.sampler_bind_group().clone(),
+                    glyph_texture.texture().clone(),
+                    mapping,
+                ),
             );
             glyph_textures.push(glyph_texture);
         }
