@@ -1,5 +1,4 @@
 use super::{EventHandler, EventHandlerId};
-use crate::ContextHandle;
 use parking_lot::Mutex;
 
 pub struct EventDispatcher<T> {
@@ -44,7 +43,7 @@ impl<T> EventDispatcher<T> {
         }
     }
 
-    pub fn dispatch(&self, ctx: &ContextHandle, event: &T) {
+    pub fn dispatch(&self, event: &T) {
         let mut handlers = if let Some(handlers) = self.handlers.try_lock() {
             handlers
         } else {
@@ -52,7 +51,7 @@ impl<T> EventDispatcher<T> {
         };
 
         for handler in handlers.iter_mut() {
-            handler.call(ctx, event);
+            handler.call(event);
         }
 
         for removed in self.removed_queue.lock().drain(..) {

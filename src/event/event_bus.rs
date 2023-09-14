@@ -1,7 +1,5 @@
-use parking_lot::Mutex;
-
 use super::{EventDispatcher, EventHandler, EventHandlerId};
-use crate::ContextHandle;
+use parking_lot::Mutex;
 use std::{
     any::{Any, TypeId},
     collections::HashMap,
@@ -67,13 +65,13 @@ impl EventBus {
             .remove_handler(handler_id);
     }
 
-    pub fn dispatch<T: Any>(&self, ctx: &ContextHandle, event: &T) {
+    pub fn dispatch<T: Any>(&self, event: &T) {
         let dispatcher = if let Some(dispatcher) = self.dispatchers.lock().get(&TypeId::of::<T>()) {
             dispatcher.clone()
         } else {
             return;
         };
 
-        dispatcher.as_typed::<T>().unwrap().dispatch(ctx, event);
+        dispatcher.as_typed::<T>().unwrap().dispatch(event);
     }
 }

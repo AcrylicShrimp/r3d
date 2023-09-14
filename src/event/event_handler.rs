@@ -1,14 +1,12 @@
-use crate::ContextHandle;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EventHandlerId(usize);
 
 pub struct EventHandler<T> {
-    closure: Box<dyn FnMut(&ContextHandle, &T)>,
+    closure: Box<dyn FnMut(&T)>,
 }
 
 impl<T> EventHandler<T> {
-    pub fn new(closure: impl FnMut(&ContextHandle, &T) + 'static) -> Self {
+    pub fn new(closure: impl FnMut(&T) + 'static) -> Self {
         Self {
             closure: Box::new(closure),
         }
@@ -18,7 +16,7 @@ impl<T> EventHandler<T> {
         EventHandlerId(self.closure.as_ref() as *const _ as *const () as usize)
     }
 
-    pub fn call(&mut self, ctx: &ContextHandle, event: &T) {
-        (self.closure)(ctx, event);
+    pub fn call(&mut self, event: &T) {
+        (self.closure)(event);
     }
 }

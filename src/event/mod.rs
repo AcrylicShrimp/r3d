@@ -1,4 +1,3 @@
-use crate::use_context;
 use std::any::Any;
 
 mod event_bus;
@@ -30,6 +29,6 @@ impl EventManager {
     }
 
     pub fn dispatch<T: Any>(&self, event: &T) {
-        self.bus.dispatch::<T>(use_context(), event);
+        self.bus.dispatch::<T>(event);
     }
 }
