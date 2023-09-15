@@ -1,13 +1,20 @@
 use super::{EventHandler, EventHandlerId};
 use parking_lot::Mutex;
+use std::any::Any;
 
-pub struct EventDispatcher<T> {
+pub trait UntypedEventDispatcher: Any {
+    fn as_any(&self) -> &dyn Any;
+
+    fn remove_untyped_handler(&self, handler_id: EventHandlerId);
+}
+
+pub struct EventDispatcher<T: Any> {
     handlers: Mutex<Vec<EventHandler<T>>>,
     added_queue: Mutex<Vec<EventHandler<T>>>,
     removed_queue: Mutex<Vec<EventHandlerId>>,
 }
 
-impl<T> EventDispatcher<T> {
+impl<T: Any> EventDispatcher<T> {
     pub fn new() -> Self {
         Self {
             handlers: Vec::new().into(),
@@ -61,5 +68,15 @@ impl<T> EventDispatcher<T> {
         }
 
         handlers.extend(self.added_queue.lock().drain(..));
+    }
+}
+
+impl<T: Any> UntypedEventDispatcher for EventDispatcher<T> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn remove_untyped_handler(&self, handler_id: EventHandlerId) {
+        self.remove_handler(handler_id);
     }
 }

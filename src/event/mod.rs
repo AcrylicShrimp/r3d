@@ -24,8 +24,8 @@ impl EventManager {
         self.bus.add_handler(handler);
     }
 
-    pub fn remove_handler<T: Any>(&self, handler_id: EventHandlerId) {
-        self.bus.remove_handler::<T>(handler_id);
+    pub fn remove_handler(&self, handler_id: EventHandlerId) {
+        self.bus.remove_handler(handler_id);
     }
 
     pub fn dispatch<T: Any>(&self, event: &T) {

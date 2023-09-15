@@ -1,4 +1,4 @@
-use super::{EventDispatcher, EventHandler, EventHandlerId};
+use super::{EventDispatcher, EventHandler, EventHandlerId, UntypedEventDispatcher};
 use parking_lot::Mutex;
 use std::{
     any::{Any, TypeId},
@@ -7,7 +7,7 @@ use std::{
 };
 
 struct UntypedDispatcher {
-    dispatcher: Arc<dyn Any>,
+    dispatcher: Arc<dyn UntypedEventDispatcher>,
 }
 
 impl UntypedDispatcher {
@@ -17,8 +17,14 @@ impl UntypedDispatcher {
         }
     }
 
+    pub fn dispatcher(&self) -> &dyn UntypedEventDispatcher {
+        &*self.dispatcher
+    }
+
     pub fn as_typed<T: Any>(&self) -> Option<&EventDispatcher<T>> {
-        self.dispatcher.downcast_ref::<EventDispatcher<T>>()
+        self.dispatcher
+            .as_any()
+            .downcast_ref::<EventDispatcher<T>>()
     }
 }
 
@@ -41,7 +47,8 @@ impl EventBus {
         }
     }
 
-    pub fn add_handler<T: Any>(&self, handler: EventHandler<T>) {
+    pub fn add_handler<T: Any>(&self, handler: EventHandler<T>) -> EventHandlerId {
+        let id = handler.id();
         let dispatcher = self
             .dispatchers
             .lock()
@@ -50,19 +57,19 @@ impl EventBus {
             .clone();
 
         dispatcher.as_typed::<T>().unwrap().add_handler(handler);
+
+        id
     }
 
-    pub fn remove_handler<T: Any>(&self, handler_id: EventHandlerId) {
-        let dispatcher = if let Some(dispatcher) = self.dispatchers.lock().get(&TypeId::of::<T>()) {
-            dispatcher.clone()
-        } else {
-            return;
-        };
+    pub fn remove_handler(&self, handler_id: EventHandlerId) {
+        let dispatcher =
+            if let Some(dispatcher) = self.dispatchers.lock().get(&handler_id.type_id()) {
+                dispatcher.clone()
+            } else {
+                return;
+            };
 
-        dispatcher
-            .as_typed::<T>()
-            .unwrap()
-            .remove_handler(handler_id);
+        dispatcher.dispatcher().remove_untyped_handler(handler_id);
     }
 
     pub fn dispatch<T: Any>(&self, event: &T) {
