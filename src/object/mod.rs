@@ -16,7 +16,7 @@ pub use object_id_allocator::*;
 pub use object_manager::*;
 pub use object_name_registry::*;
 
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Copy, Component)]
 #[storage(VecStorage)]
 pub struct Object {
     entity: Entity,
