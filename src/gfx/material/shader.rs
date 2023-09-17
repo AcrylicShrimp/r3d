@@ -155,6 +155,21 @@ pub mod semantic_inputs {
         format: VertexFormat::Float32x4,
         step_mode: VertexStepMode::Instance,
     };
+
+    pub const KEY_GLYPH_THICKNESS: SemanticShaderInputKey = SemanticShaderInputKey::new(301);
+    pub const GLYPH_THICKNESS: SemanticShaderInput = SemanticShaderInput {
+        key: KEY_GLYPH_THICKNESS,
+        name: "glyph_thickness",
+        format: VertexFormat::Float32,
+        step_mode: VertexStepMode::Instance,
+    };
+    pub const KEY_GLYPH_SMOOTHNESS: SemanticShaderInputKey = SemanticShaderInputKey::new(302);
+    pub const GLYPH_SMOOTHNESS: SemanticShaderInput = SemanticShaderInput {
+        key: KEY_GLYPH_SMOOTHNESS,
+        name: "glyph_smoothness",
+        format: VertexFormat::Float32,
+        step_mode: VertexStepMode::Instance,
+    };
 }
 
 pub mod semantic_outputs {
@@ -271,6 +286,8 @@ impl ShaderManager {
         this.register_input(semantic_inputs::SPRITE_UV_MIN);
         this.register_input(semantic_inputs::SPRITE_UV_MAX);
         this.register_input(semantic_inputs::SPRITE_COLOR);
+        this.register_input(semantic_inputs::GLYPH_THICKNESS);
+        this.register_input(semantic_inputs::GLYPH_SMOOTHNESS);
 
         this.register_output(semantic_outputs::COLOR);
 
