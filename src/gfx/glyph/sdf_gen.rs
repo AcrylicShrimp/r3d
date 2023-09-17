@@ -68,9 +68,13 @@ pub fn generate_sdf(
     let radius = radius as f32;
     let mut sdf = vec![0; width * height];
 
-    for index in 0..len {
-        let distance = grid_outer[index].sqrt() - grid_inner[index].sqrt();
-        sdf[index] = (255f32 - 255f32 * (distance / radius + cutoff)).round() as u8;
+    for y in 0..height {
+        for x in 0..width {
+            let index = y * width + x;
+            let v_flip_index = (height - y - 1) * width + x;
+            let distance = grid_outer[index].sqrt() - grid_inner[index].sqrt();
+            sdf[v_flip_index] = (255f32 - 255f32 * (distance / radius + cutoff)).round() as u8;
+        }
     }
 
     sdf
