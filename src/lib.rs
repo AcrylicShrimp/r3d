@@ -47,6 +47,7 @@ pub mod ui;
 pub mod vsync;
 
 // re-exports.
+pub use fontdue;
 pub use image;
 pub use russimp;
 pub use specs;
