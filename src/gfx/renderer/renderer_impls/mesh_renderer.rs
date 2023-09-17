@@ -1,9 +1,11 @@
 use crate::gfx::{
-    semantic_inputs::{KEY_NORMAL, KEY_POSITION, KEY_UV},
-    BindGroupProvider, GenericBufferAllocation, HostBuffer, MaterialHandle, MeshHandle,
-    PerInstanceDataProvider, PipelineProvider, Renderer, RendererVertexBufferAttribute,
-    RendererVertexBufferLayout, SemanticShaderBindingKey, SemanticShaderInputKey,
+    semantic_inputs::{self, KEY_NORMAL, KEY_POSITION, KEY_UV},
+    BindGroupProvider, CachedPipeline, GenericBufferAllocation, HostBuffer, InstanceDataProvider,
+    Material, MaterialHandle, MeshHandle, PipelineCache, PipelineProvider, Renderer,
+    RendererVertexBufferAttribute, RendererVertexBufferLayout, SemanticShaderBindingKey,
+    SemanticShaderInputKey, ShaderManager, VertexBuffer, VertexBufferProvider,
 };
+use parking_lot::RwLockReadGuard;
 use specs::{prelude::*, Component};
 use std::mem::size_of;
 use wgpu::{
@@ -121,43 +123,69 @@ impl MeshRenderer {
         ));
     }
 
-    pub fn bind_group_provider(&self) -> impl BindGroupProvider {
-        MeshRendererBindGroupProvider
-    }
+    pub fn sub_renderer(
+        &mut self,
+        shader_mgr: &ShaderManager,
+        pipeline_cache: &mut PipelineCache,
+    ) -> Option<MeshSubRenderer> {
+        let pipeline = self
+            .pipeline_provider
+            .obtain_pipeline(shader_mgr, pipeline_cache)?;
+        let material = self.pipeline_provider.material().cloned()?;
+        let vertex_buffer = self.vertex_buffer.clone()?;
+        let mesh = self.mesh.as_ref()?;
 
-    pub fn per_instance_data_provider(&self) -> impl PerInstanceDataProvider {
-        MeshRendererPerInstanceDataProvider
+        Some(MeshSubRenderer {
+            pipeline,
+            material,
+            vertex_count: mesh.data.faces.len() as u32 * 3,
+            bind_group_provider: MeshRendererBindGroupProvider,
+            vertex_buffer_provider: MeshRendererVertexBufferProvider { vertex_buffer },
+            instance_data_provider: MeshRendererInstanceDataProvider,
+        })
     }
 }
 
-impl Renderer for MeshRenderer {
-    fn pipeline_provider(&mut self) -> &mut PipelineProvider {
-        &mut self.pipeline_provider
+pub struct MeshSubRenderer {
+    pipeline: CachedPipeline,
+    material: MaterialHandle,
+    vertex_count: u32,
+    bind_group_provider: MeshRendererBindGroupProvider,
+    vertex_buffer_provider: MeshRendererVertexBufferProvider,
+    instance_data_provider: MeshRendererInstanceDataProvider,
+}
+
+impl Renderer for MeshSubRenderer {
+    fn pipeline(&self) -> CachedPipeline {
+        self.pipeline.clone()
+    }
+
+    fn material(&self) -> RwLockReadGuard<Material> {
+        self.material.read()
     }
 
     fn instance_count(&self) -> u32 {
-        match &self.mesh {
-            Some(_) => 1,
-            None => 0,
-        }
+        1
     }
 
     fn vertex_count(&self) -> u32 {
-        match &self.mesh {
-            Some(mesh) => mesh.data.faces.len() as u32 * 3,
-            None => 0,
-        }
+        self.vertex_count
     }
 
-    fn vertex_buffers(&self) -> Vec<GenericBufferAllocation<Buffer>> {
-        match &self.vertex_buffer {
-            Some(buffer) => vec![buffer.clone()],
-            None => Vec::new(),
-        }
+    fn bind_group_provider(&self) -> &dyn BindGroupProvider {
+        &self.bind_group_provider
+    }
+
+    fn vertex_buffer_provider(&self) -> &dyn VertexBufferProvider {
+        &self.vertex_buffer_provider
+    }
+
+    fn instance_data_provider(&self) -> &dyn InstanceDataProvider {
+        &self.instance_data_provider
     }
 }
 
-pub struct MeshRendererBindGroupProvider;
+struct MeshRendererBindGroupProvider;
 
 impl BindGroupProvider for MeshRendererBindGroupProvider {
     fn bind_group(&self, _instance: u32, _key: SemanticShaderBindingKey) -> Option<&BindGroup> {
@@ -165,9 +193,27 @@ impl BindGroupProvider for MeshRendererBindGroupProvider {
     }
 }
 
-pub struct MeshRendererPerInstanceDataProvider;
+struct MeshRendererVertexBufferProvider {
+    vertex_buffer: GenericBufferAllocation<Buffer>,
+}
 
-impl PerInstanceDataProvider for MeshRendererPerInstanceDataProvider {
+impl VertexBufferProvider for MeshRendererVertexBufferProvider {
+    fn vertex_buffer(&self, key: SemanticShaderInputKey) -> Option<VertexBuffer> {
+        match key {
+            semantic_inputs::KEY_POSITION
+            | semantic_inputs::KEY_NORMAL
+            | semantic_inputs::KEY_UV => Some(VertexBuffer {
+                slot: 0,
+                buffer: &self.vertex_buffer,
+            }),
+            _ => None,
+        }
+    }
+}
+
+struct MeshRendererInstanceDataProvider;
+
+impl InstanceDataProvider for MeshRendererInstanceDataProvider {
     fn copy_per_instance_data(
         &self,
         _instance: u32,

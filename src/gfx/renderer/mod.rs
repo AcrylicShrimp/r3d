@@ -1,7 +1,7 @@
 use super::{
     semantic_bindings,
     semantic_inputs::{self},
-    CachedPipeline, Material, PipelineCache, ShaderManager,
+    CachedPipeline, Material,
 };
 use crate::object::{ObjectHierarchy, ObjectId};
 use parking_lot::RwLockReadGuard;
@@ -30,11 +30,12 @@ pub struct RenderingCommand<'r> {
     pub instance_count: u32,
     pub vertex_count: u32,
     pub bind_group_provider: &'r dyn BindGroupProvider,
-    pub per_vertex_buffers: Vec<GenericBufferAllocation<Buffer>>,
-    pub per_instance_buffer: Option<GenericBufferAllocation<Buffer>>,
+    pub vertex_buffer_provider: &'r dyn VertexBufferProvider,
+    pub instance_buffer: Option<GenericBufferAllocation<Buffer>>,
 }
 
 impl<'r> RenderingCommand<'r> {
+    /// Records a render pass for this rendering command.
     pub fn render(
         &'r self,
         render_pass: &mut RenderPass<'r>,
@@ -58,6 +59,7 @@ impl<'r> RenderingCommand<'r> {
                     render_pass.set_bind_group(binding.group, screen_size_bind_group, &[]);
                 }
                 _ => {
+                    // TODO: Since this bind group is required, we should notify the user if it's not present.
                     if let Some(bind_group) = self.bind_group_provider.bind_group(0, key) {
                         render_pass.set_bind_group(binding.group, &bind_group, &[]);
                     }
@@ -68,50 +70,72 @@ impl<'r> RenderingCommand<'r> {
         for bind_group_index in self.material.bind_properties.values() {
             let bind_group_holder = &self.material.bind_group_holders[bind_group_index.group_index];
 
+            // TODO: Since this bind group is required, we should notify the user if it's not present.
             if let Some(bind_group) = bind_group_holder.bind_group.as_ref() {
                 render_pass.set_bind_group(bind_group_holder.group, bind_group, &[]);
             }
         }
 
-        for (index, buffer) in self.per_vertex_buffers.iter().enumerate() {
-            render_pass.set_vertex_buffer(index as u32, buffer.as_slice());
+        for input in &self
+            .material
+            .shader
+            .reflected_shader
+            .per_vertex_input
+            .elements
+        {
+            let key = if let Some(key) = input.semantic_input {
+                key
+            } else {
+                continue;
+            };
+
+            // TODO: Since this vertex buffer is required, we should notify the user if it's not present.
+            if let Some(VertexBuffer { slot, buffer }) =
+                self.vertex_buffer_provider.vertex_buffer(key)
+            {
+                render_pass.set_vertex_buffer(slot, buffer.as_slice());
+            }
         }
 
-        if let Some(buffer) = &self.per_instance_buffer {
-            render_pass.set_vertex_buffer(self.per_vertex_buffers.len() as u32, buffer.as_slice());
+        if !self
+            .material
+            .shader
+            .reflected_shader
+            .per_instance_input
+            .elements
+            .is_empty()
+        {
+            // TODO: Since this per-instance vertex buffer is required, we should notify the user if it's not present.
+            if let Some(buffer) = &self.instance_buffer {
+                // Instance buffer's slot is always the last one. See [pipeline_provider::PipelineProvider].
+                render_pass.set_vertex_buffer(
+                    self.material
+                        .shader
+                        .reflected_shader
+                        .per_vertex_input
+                        .elements
+                        .len() as u32,
+                    buffer.as_slice(),
+                );
+            }
         }
 
         render_pass.draw(0..self.vertex_count, 0..self.instance_count);
     }
 }
 
+/// Constructs a rendering command for the given object by encoding per-instance data into a buffer.
 pub fn build_rendering_command<'r>(
     object_id: ObjectId,
     object_hierarchy: &ObjectHierarchy,
-    renderer: &'r mut dyn Renderer,
-    bind_group_provider: &'r dyn BindGroupProvider,
-    per_instance_data_provider: &dyn PerInstanceDataProvider,
-    shader_mgr: &ShaderManager,
-    pipeline_cache: &mut PipelineCache,
+    renderer: &'r dyn Renderer,
     frame_buffer_allocator: &mut FrameBufferAllocator,
-) -> Option<RenderingCommand<'r>> {
+) -> RenderingCommand<'r> {
     let matrix = object_hierarchy.matrix(object_id);
-
-    let pipeline_provider = renderer.pipeline_provider();
-    let pipeline =
-        if let Some(pipeline) = pipeline_provider.obtain_pipeline(shader_mgr, pipeline_cache) {
-            pipeline
-        } else {
-            return None;
-        };
-    let material = if let Some(material) = pipeline_provider.material() {
-        material.clone()
-    } else {
-        return None;
-    };
-    let material = material.read();
+    let material = renderer.material();
 
     let instance_count = renderer.instance_count();
+    let instance_data_provider = renderer.instance_data_provider();
     let per_instance_buffer = frame_buffer_allocator.alloc_staging_buffer(
         material.shader.reflected_shader.per_instance_input.stride
             * instance_count as BufferAddress,
@@ -149,7 +173,7 @@ pub fn build_rendering_command<'r>(
                     allocation.copy_from_slice(matrix.row(3).as_bytes())
                 }
                 _ => {
-                    per_instance_data_provider.copy_per_instance_data(instance, key, allocation);
+                    instance_data_provider.copy_per_instance_data(instance, key, allocation);
                 }
             }
         }
@@ -165,13 +189,13 @@ pub fn build_rendering_command<'r>(
 
     let per_instance_buffer = frame_buffer_allocator.commit_staging_buffer(per_instance_buffer);
 
-    Some(RenderingCommand {
-        pipeline,
+    RenderingCommand {
+        pipeline: renderer.pipeline(),
+        material,
         instance_count,
         vertex_count: renderer.vertex_count(),
-        bind_group_provider,
-        per_vertex_buffers: renderer.vertex_buffers(),
-        per_instance_buffer,
-        material: renderer.pipeline_provider().material().unwrap().read(),
-    })
+        bind_group_provider: renderer.bind_group_provider(),
+        vertex_buffer_provider: renderer.vertex_buffer_provider(),
+        instance_buffer: per_instance_buffer,
+    }
 }

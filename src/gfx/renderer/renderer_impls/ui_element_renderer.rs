@@ -2,13 +2,15 @@ use crate::{
     gfx::{
         semantic_bindings,
         semantic_inputs::{self, KEY_POSITION},
-        BindGroupLayoutCache, BindGroupProvider, Color, GenericBufferAllocation, HostBuffer,
-        MaterialHandle, NinePatchHandle, PerInstanceDataProvider, PipelineProvider, Renderer,
-        RendererVertexBufferAttribute, RendererVertexBufferLayout, SemanticShaderBindingKey,
-        SemanticShaderInputKey, SpriteHandle, TextureHandle,
+        BindGroupLayoutCache, BindGroupProvider, CachedPipeline, Color, GenericBufferAllocation,
+        HostBuffer, InstanceDataProvider, Material, MaterialHandle, NinePatchHandle, PipelineCache,
+        PipelineProvider, Renderer, RendererVertexBufferAttribute, RendererVertexBufferLayout,
+        SemanticShaderBindingKey, SemanticShaderInputKey, ShaderManager, SpriteHandle,
+        TextureHandle, VertexBuffer, VertexBufferProvider,
     },
-    math::Vec2,
+    ui::UISize,
 };
+use parking_lot::RwLockReadGuard;
 use specs::{prelude::*, Component};
 use std::{mem::size_of, sync::Arc};
 use wgpu::{
@@ -180,80 +182,119 @@ impl UIElementRenderer {
         ));
     }
 
-    pub fn bind_group_provider(&self) -> impl BindGroupProvider {
-        UIElementRendererBindGroupProvider {
-            sprite_texture_bind_group: self.sprite_texture_bind_group.clone(),
-            sprite_sampler_bind_group: self.sprite_sampler_bind_group.clone(),
-        }
-    }
+    pub fn sub_renderer(
+        &mut self,
+        size: UISize,
+        shader_mgr: &ShaderManager,
+        pipeline_cache: &mut PipelineCache,
+    ) -> Option<UIElementSubRenderer> {
+        let pipeline = self
+            .pipeline_provider
+            .obtain_pipeline(shader_mgr, pipeline_cache)?;
+        let material = self.pipeline_provider.material().cloned()?;
+        let vertex_buffer = self.vertex_buffer.clone()?;
+        let sprite = self.sprite.clone()?;
+        let sprite_texture_bind_group = self.sprite_texture_bind_group.clone()?;
+        let sprite_sampler_bind_group = self.sprite_sampler_bind_group.clone()?;
 
-    pub fn per_instance_data_provider(&self, size: Vec2) -> impl PerInstanceDataProvider {
-        UIElementRendererPerInstanceDataProvider {
-            sprite: self.sprite.clone(),
-            size,
-            color: self.color,
-        }
-    }
-}
-
-impl Renderer for UIElementRenderer {
-    fn pipeline_provider(&mut self) -> &mut PipelineProvider {
-        &mut self.pipeline_provider
-    }
-
-    fn instance_count(&self) -> u32 {
-        match &self.sprite {
-            Some(sprite) => match sprite {
+        Some(UIElementSubRenderer {
+            pipeline,
+            material,
+            instance_count: match &sprite {
                 UIElementSprite::Sprite(_) => 1,
                 UIElementSprite::NinePatch(_) => 9,
             },
-            None => 0,
-        }
-    }
-
-    fn vertex_count(&self) -> u32 {
-        match &self.sprite {
-            Some(_) => 6,
-            None => 0,
-        }
-    }
-
-    fn vertex_buffers(&self) -> Vec<GenericBufferAllocation<Buffer>> {
-        match &self.vertex_buffer {
-            Some(buffer) => vec![buffer.clone()],
-            None => Vec::new(),
-        }
+            bind_group_provider: UIElementRendererBindGroupProvider {
+                sprite_texture_bind_group,
+                sprite_sampler_bind_group,
+            },
+            vertex_buffer_provider: UIElementRendererVertexBufferProvider { vertex_buffer },
+            instance_data_provider: UIElementRendererInstanceDataProvider {
+                sprite,
+                size,
+                color: self.color,
+            },
+        })
     }
 }
 
-pub struct UIElementRendererBindGroupProvider {
-    sprite_texture_bind_group: Option<Arc<BindGroup>>,
-    sprite_sampler_bind_group: Option<Arc<BindGroup>>,
+pub struct UIElementSubRenderer {
+    pipeline: CachedPipeline,
+    material: MaterialHandle,
+    instance_count: u32,
+    bind_group_provider: UIElementRendererBindGroupProvider,
+    vertex_buffer_provider: UIElementRendererVertexBufferProvider,
+    instance_data_provider: UIElementRendererInstanceDataProvider,
+}
+
+impl Renderer for UIElementSubRenderer {
+    fn pipeline(&self) -> CachedPipeline {
+        self.pipeline.clone()
+    }
+
+    fn material(&self) -> RwLockReadGuard<Material> {
+        self.material.read()
+    }
+
+    fn instance_count(&self) -> u32 {
+        self.instance_count
+    }
+
+    fn vertex_count(&self) -> u32 {
+        6
+    }
+
+    fn bind_group_provider(&self) -> &dyn BindGroupProvider {
+        &self.bind_group_provider
+    }
+
+    fn vertex_buffer_provider(&self) -> &dyn crate::gfx::VertexBufferProvider {
+        &self.vertex_buffer_provider
+    }
+
+    fn instance_data_provider(&self) -> &dyn InstanceDataProvider {
+        &self.instance_data_provider
+    }
+}
+
+struct UIElementRendererBindGroupProvider {
+    sprite_texture_bind_group: Arc<BindGroup>,
+    sprite_sampler_bind_group: Arc<BindGroup>,
 }
 
 impl BindGroupProvider for UIElementRendererBindGroupProvider {
     fn bind_group(&self, _instance: u32, key: SemanticShaderBindingKey) -> Option<&BindGroup> {
         match key {
-            semantic_bindings::KEY_SPRITE_TEXTURE => self
-                .sprite_texture_bind_group
-                .as_ref()
-                .map(|bind_group| bind_group.as_ref()),
-            semantic_bindings::KEY_SPRITE_SAMPLER => self
-                .sprite_sampler_bind_group
-                .as_ref()
-                .map(|bind_group| bind_group.as_ref()),
+            semantic_bindings::KEY_SPRITE_TEXTURE => Some(&self.sprite_texture_bind_group),
+            semantic_bindings::KEY_SPRITE_SAMPLER => Some(&self.sprite_sampler_bind_group),
             _ => None,
         }
     }
 }
 
-pub struct UIElementRendererPerInstanceDataProvider {
-    sprite: Option<UIElementSprite>,
-    size: Vec2,
+struct UIElementRendererVertexBufferProvider {
+    vertex_buffer: GenericBufferAllocation<Buffer>,
+}
+
+impl VertexBufferProvider for UIElementRendererVertexBufferProvider {
+    fn vertex_buffer(&self, key: SemanticShaderInputKey) -> Option<VertexBuffer> {
+        match key {
+            semantic_inputs::KEY_POSITION => Some(VertexBuffer {
+                slot: 0,
+                buffer: &self.vertex_buffer,
+            }),
+            _ => None,
+        }
+    }
+}
+
+struct UIElementRendererInstanceDataProvider {
+    sprite: UIElementSprite,
+    size: UISize,
     color: Color,
 }
 
-impl PerInstanceDataProvider for UIElementRendererPerInstanceDataProvider {
+impl InstanceDataProvider for UIElementRendererInstanceDataProvider {
     fn copy_per_instance_data(
         &self,
         instance: u32,
@@ -276,13 +317,7 @@ impl PerInstanceDataProvider for UIElementRendererPerInstanceDataProvider {
                 );
             }
             semantic_inputs::KEY_SPRITE_UV_MIN => {
-                let sprite = if let Some(sprite) = &self.sprite {
-                    sprite
-                } else {
-                    return;
-                };
-
-                let uv_min = match sprite {
+                let uv_min = match &self.sprite {
                     UIElementSprite::Sprite(sprite) => {
                         let mapping = sprite.mapping();
                         [
@@ -312,13 +347,7 @@ impl PerInstanceDataProvider for UIElementRendererPerInstanceDataProvider {
                 buffer.copy_from_slice(uv_min.as_bytes());
             }
             semantic_inputs::KEY_SPRITE_UV_MAX => {
-                let sprite = if let Some(sprite) = &self.sprite {
-                    sprite
-                } else {
-                    return;
-                };
-
-                let uv_min = match sprite {
+                let uv_min = match &self.sprite {
                     UIElementSprite::Sprite(sprite) => {
                         let mapping = sprite.mapping();
                         [
@@ -357,36 +386,30 @@ impl PerInstanceDataProvider for UIElementRendererPerInstanceDataProvider {
     }
 }
 
-impl UIElementRendererPerInstanceDataProvider {
+impl UIElementRendererInstanceDataProvider {
     fn compute_size_x(&self, instance: u32) -> f32 {
-        let sprite = if let Some(sprite) = &self.sprite {
-            sprite
-        } else {
-            return 0.0;
-        };
-
-        let nine_patch = if let UIElementSprite::NinePatch(nine_patch) = sprite {
+        let nine_patch = if let UIElementSprite::NinePatch(nine_patch) = &self.sprite {
             nine_patch
         } else {
-            return self.size.x;
+            return self.size.width;
         };
 
         match instance {
             0 | 3 | 6 => {
                 let mapping = nine_patch.mapping();
                 let min_width = (mapping.width() - mapping.mid_width()) as f32;
-                let ratio = f32::min(1.0, self.size.x / min_width);
+                let ratio = f32::min(1.0, self.size.width / min_width);
                 u16::abs_diff(mapping.x_min, mapping.x_mid_left) as f32 * ratio
             }
             1 | 4 | 7 => {
                 let mapping = nine_patch.mapping();
                 let min_width = mapping.width() - mapping.mid_width();
-                f32::max(0.0, self.size.x - min_width as f32)
+                f32::max(0.0, self.size.width - min_width as f32)
             }
             2 | 5 | 8 => {
                 let mapping = nine_patch.mapping();
                 let min_width = (mapping.width() - mapping.mid_width()) as f32;
-                let ratio = f32::min(1.0, self.size.x / min_width);
+                let ratio = f32::min(1.0, self.size.width / min_width);
                 u16::abs_diff(mapping.x_mid_right, mapping.x_max) as f32 * ratio
             }
             _ => 0.0,
@@ -394,34 +417,28 @@ impl UIElementRendererPerInstanceDataProvider {
     }
 
     fn compute_size_y(&self, instance: u32) -> f32 {
-        let sprite = if let Some(sprite) = &self.sprite {
-            sprite
-        } else {
-            return 0.0;
-        };
-
-        let nine_patch = if let UIElementSprite::NinePatch(nine_patch) = sprite {
+        let nine_patch = if let UIElementSprite::NinePatch(nine_patch) = &self.sprite {
             nine_patch
         } else {
-            return self.size.y;
+            return self.size.height;
         };
 
         match instance {
             0 | 1 | 2 => {
                 let mapping = nine_patch.mapping();
                 let min_height = (mapping.height() - mapping.mid_height()) as f32;
-                let ratio = f32::min(1.0, self.size.y / min_height);
+                let ratio = f32::min(1.0, self.size.height / min_height);
                 u16::abs_diff(mapping.y_mid_top, mapping.y_max) as f32 * ratio
             }
             3 | 4 | 5 => {
                 let mapping = nine_patch.mapping();
                 let min_height = mapping.height() - mapping.mid_height();
-                f32::max(0.0, self.size.y - min_height as f32)
+                f32::max(0.0, self.size.height - min_height as f32)
             }
             6 | 7 | 8 => {
                 let mapping = nine_patch.mapping();
                 let min_height = (mapping.height() - mapping.mid_height()) as f32;
-                let ratio = f32::min(1.0, self.size.y / min_height);
+                let ratio = f32::min(1.0, self.size.height / min_height);
                 u16::abs_diff(mapping.y_min, mapping.y_mid_bottom) as f32 * ratio
             }
             _ => 0.0,
@@ -429,37 +446,25 @@ impl UIElementRendererPerInstanceDataProvider {
     }
 
     fn compute_offset_x(&self, instance: u32) -> f32 {
-        let sprite = if let Some(sprite) = &self.sprite {
-            sprite
-        } else {
-            return 0.0;
-        };
-
-        if let UIElementSprite::Sprite(_) = sprite {
+        if let UIElementSprite::Sprite(_) = &self.sprite {
             return 0.0;
         }
 
         match instance {
             0 | 3 | 6 => 0f32,
             1 | 4 | 7 => self.compute_size_x(instance - 1),
-            2 | 5 | 8 => self.size.x - self.compute_size_x(instance - 2),
+            2 | 5 | 8 => self.size.width - self.compute_size_x(instance - 2),
             _ => 0.0,
         }
     }
 
     fn compute_offset_y(&self, instance: u32) -> f32 {
-        let sprite = if let Some(sprite) = &self.sprite {
-            sprite
-        } else {
-            return 0.0;
-        };
-
-        if let UIElementSprite::Sprite(_) = sprite {
+        if let UIElementSprite::Sprite(_) = &self.sprite {
             return 0.0;
         }
 
         match instance {
-            0 | 1 | 2 => self.size.y - self.compute_size_y(instance),
+            0 | 1 | 2 => self.size.height - self.compute_size_y(instance),
             3 | 4 | 5 => self.compute_size_y(instance + 3),
             6 | 7 | 8 => 0.0,
             _ => 0.0,

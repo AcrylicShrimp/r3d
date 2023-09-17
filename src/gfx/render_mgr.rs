@@ -1,8 +1,7 @@
 use super::{
-    build_rendering_command, BindGroupLayoutCache, BindGroupProvider, CameraClearMode,
-    DepthStencil, DepthStencilMode, FrameBufferAllocator, GfxContextHandle,
-    PerInstanceDataProvider, PipelineCache, PipelineLayoutCache, Renderer, RenderingCommand,
-    ShaderManager,
+    build_rendering_command, BindGroupLayoutCache, CameraClearMode, DepthStencil, DepthStencilMode,
+    FrameBufferAllocator, GfxContextHandle, PipelineCache, PipelineLayoutCache, Renderer,
+    RenderingCommand,
 };
 use crate::object::{ObjectHierarchy, ObjectId};
 use wgpu::{
@@ -114,23 +113,17 @@ impl RenderManager {
         Ok(render_pass)
     }
 
+    /// Constructs a rendering command for the given object by encoding per-instance data into a buffer.
     pub fn build_rendering_command<'r>(
         &mut self,
         object_id: ObjectId,
         object_hierarchy: &ObjectHierarchy,
-        renderer: &'r mut dyn Renderer,
-        bind_group_provider: &'r dyn BindGroupProvider,
-        per_instance_data_provider: &dyn PerInstanceDataProvider,
-        shader_mgr: &ShaderManager,
-    ) -> Option<RenderingCommand<'r>> {
+        renderer: &'r dyn Renderer,
+    ) -> RenderingCommand<'r> {
         build_rendering_command(
             object_id,
             object_hierarchy,
             renderer,
-            bind_group_provider,
-            per_instance_data_provider,
-            shader_mgr,
-            &mut self.pipeline_cache,
             &mut self.frame_buffer_allocator,
         )
     }

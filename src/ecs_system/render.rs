@@ -1,6 +1,7 @@
 use crate::{
-    gfx::{BindGroupLayoutCache, Camera, MeshRenderer, Renderer, UIElementRenderer},
-    math::Vec2,
+    gfx::{
+        BindGroupLayoutCache, Camera, MeshRenderer, Renderer, UIElementRenderer, UITextRenderer,
+    },
     object::Object,
     ui::UISize,
     use_context,
@@ -59,12 +60,20 @@ impl<'a> System<'a> for RenderSystem {
         ReadStorage<'a, Camera>,
         WriteStorage<'a, MeshRenderer>,
         WriteStorage<'a, UIElementRenderer>,
+        WriteStorage<'a, UITextRenderer>,
         ReadStorage<'a, UISize>,
     );
 
     fn run(
         &mut self,
-        (objects, cameras, mut mesh_renderers, mut ui_element_renderers, ui_sizes): Self::SystemData,
+        (
+            objects,
+            cameras,
+            mut mesh_renderers,
+            mut ui_element_renderers,
+            mut ui_text_renderers,
+            ui_sizes,
+        ): Self::SystemData,
     ) {
         let context = use_context();
         let mut render_mgr = context.render_mgr_mut();
@@ -94,13 +103,16 @@ impl<'a> System<'a> for RenderSystem {
         camera_objects.sort_unstable_by_key(|&(_, camera)| camera.depth);
 
         for (object, camera) in camera_objects {
+            let pipeline_cache = render_mgr.pipeline_cache();
+
             if !object_hierarchy.is_active(object.object_id()) {
                 continue;
             }
 
-            let mut renderers = Vec::with_capacity(1024);
-            let mut mesh_renderer_providers = Vec::with_capacity(1024);
-            let mut ui_element_renderer_providers = Vec::with_capacity(1024);
+            let mut mesh_sub_renderers = Vec::with_capacity(1024);
+
+            let mut ui_element_sub_renderers = Vec::with_capacity(1024);
+            let mut ui_text_sub_renderers = Vec::with_capacity(1024);
 
             for (object, mesh_renderer) in (&objects, &mut mesh_renderers).join() {
                 let object_id = object.object_id();
@@ -113,16 +125,15 @@ impl<'a> System<'a> for RenderSystem {
                     continue;
                 }
 
-                let provider_index = mesh_renderer_providers.len();
-                let bind_group_provider = mesh_renderer.bind_group_provider();
-                let per_instance_data_provider = mesh_renderer.per_instance_data_provider();
-                mesh_renderer_providers.push((bind_group_provider, per_instance_data_provider));
+                let renderer = if let Some(renderer) =
+                    mesh_renderer.sub_renderer(shader_mgr, pipeline_cache)
+                {
+                    renderer
+                } else {
+                    continue;
+                };
 
-                renderers.push((
-                    object_id,
-                    mesh_renderer as &mut dyn Renderer,
-                    ProviderIndex::MeshRenderer(provider_index),
-                ));
+                mesh_sub_renderers.push((object_id, renderer));
             }
 
             for (object, ui_element_renderer, ui_size) in
@@ -138,46 +149,75 @@ impl<'a> System<'a> for RenderSystem {
                     continue;
                 }
 
-                let provider_index = ui_element_renderer_providers.len();
-                let bind_group_provider = ui_element_renderer.bind_group_provider();
-                let per_instance_data_provider = ui_element_renderer
-                    .per_instance_data_provider(Vec2::new(ui_size.width, ui_size.height));
-                ui_element_renderer_providers
-                    .push((bind_group_provider, per_instance_data_provider));
+                let renderer = if let Some(renderer) =
+                    ui_element_renderer.sub_renderer(*ui_size, shader_mgr, pipeline_cache)
+                {
+                    renderer
+                } else {
+                    continue;
+                };
 
-                renderers.push((
+                ui_element_sub_renderers.push((
+                    object_hierarchy.index(object_id),
                     object_id,
-                    ui_element_renderer as &mut dyn Renderer,
-                    ProviderIndex::UIElementRenderer(provider_index),
+                    renderer,
                 ));
             }
 
-            let mut commands = Vec::with_capacity(renderers.len());
+            for (object, ui_text_renderer) in (&objects, &mut ui_text_renderers).join() {
+                let object_id = object.object_id();
 
-            for (object_id, renderer, provider_index) in renderers {
-                let (bind_group_provider, per_instance_data_provider) = match provider_index {
-                    ProviderIndex::MeshRenderer(index) => {
-                        let (bind_group_provider, per_instance_data_provider) =
-                            &mesh_renderer_providers[index];
-                        (bind_group_provider as _, per_instance_data_provider as _)
-                    }
-                    ProviderIndex::UIElementRenderer(index) => {
-                        let (bind_group_provider, per_instance_data_provider) =
-                            &ui_element_renderer_providers[index];
-                        (bind_group_provider as _, per_instance_data_provider as _)
-                    }
+                if !object_hierarchy.is_active(object.object_id()) {
+                    continue;
+                }
+
+                if ui_text_renderer.mask() & camera.mask == 0 {
+                    continue;
+                }
+
+                let renderers = if let Some(renderers) =
+                    ui_text_renderer.sub_renderers(shader_mgr, pipeline_cache)
+                {
+                    renderers
+                } else {
+                    continue;
                 };
 
-                if let Some(cmd) = render_mgr.build_rendering_command(
-                    object_id,
-                    object_hierarchy,
-                    renderer,
-                    bind_group_provider,
-                    per_instance_data_provider,
-                    shader_mgr,
-                ) {
-                    commands.push(cmd);
+                for renderer in renderers {
+                    ui_text_sub_renderers.push((
+                        object_hierarchy.index(object_id),
+                        object_id,
+                        renderer,
+                    ));
                 }
+            }
+
+            let mut ui_sub_renderers =
+                Vec::with_capacity(ui_element_sub_renderers.len() + ui_text_sub_renderers.len());
+
+            for (index, object_id, renderer) in &ui_element_sub_renderers {
+                ui_sub_renderers.push((*index, *object_id, renderer as &dyn Renderer));
+            }
+
+            for (index, object_id, renderer) in &ui_text_sub_renderers {
+                ui_sub_renderers.push((*index, *object_id, renderer as &dyn Renderer));
+            }
+
+            ui_sub_renderers.sort_unstable_by_key(|&(index, _, _)| index);
+
+            let mut commands =
+                Vec::with_capacity(mesh_sub_renderers.len() + ui_sub_renderers.len());
+
+            for (object_id, renderer) in &mesh_sub_renderers {
+                let command =
+                    render_mgr.build_rendering_command(*object_id, object_hierarchy, renderer);
+                commands.push(command);
+            }
+
+            for (_, object_id, renderer) in &ui_sub_renderers {
+                let command =
+                    render_mgr.build_rendering_command(*object_id, object_hierarchy, *renderer);
+                commands.push(command);
             }
 
             let mut render_pass = render_mgr
@@ -200,9 +240,4 @@ impl<'a> System<'a> for RenderSystem {
         render_mgr.finish_frame(vec![encoder.finish()]);
         surface_texture.present();
     }
-}
-
-enum ProviderIndex {
-    MeshRenderer(usize),
-    UIElementRenderer(usize),
 }
