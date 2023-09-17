@@ -103,6 +103,7 @@ impl<'a> System<'a> for RenderSystem {
         camera_objects.sort_unstable_by_key(|&(_, camera)| camera.depth);
 
         for (object, camera) in camera_objects {
+            let standard_ui_vertex_buffer = render_mgr.standard_ui_vertex_buffer().clone();
             let pipeline_cache = render_mgr.pipeline_cache();
 
             if !object_hierarchy.is_active(object.object_id()) {
@@ -149,9 +150,12 @@ impl<'a> System<'a> for RenderSystem {
                     continue;
                 }
 
-                let renderer = if let Some(renderer) =
-                    ui_element_renderer.sub_renderer(*ui_size, shader_mgr, pipeline_cache)
-                {
+                let renderer = if let Some(renderer) = ui_element_renderer.sub_renderer(
+                    *ui_size,
+                    &standard_ui_vertex_buffer,
+                    shader_mgr,
+                    pipeline_cache,
+                ) {
                     renderer
                 } else {
                     continue;
@@ -175,9 +179,11 @@ impl<'a> System<'a> for RenderSystem {
                     continue;
                 }
 
-                let renderers = if let Some(renderers) =
-                    ui_text_renderer.sub_renderers(shader_mgr, pipeline_cache)
-                {
+                let renderers = if let Some(renderers) = ui_text_renderer.sub_renderers(
+                    &standard_ui_vertex_buffer,
+                    shader_mgr,
+                    pipeline_cache,
+                ) {
                     renderers
                 } else {
                     continue;

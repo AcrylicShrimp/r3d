@@ -14,11 +14,10 @@ use parking_lot::RwLockReadGuard;
 use specs::{prelude::*, Component};
 use std::{mem::size_of, sync::Arc};
 use wgpu::{
-    util::{BufferInitDescriptor, DeviceExt},
     BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutEntry, BindingResource,
-    BindingType, Buffer, BufferAddress, BufferSize, BufferUsages, CompareFunction,
-    DepthStencilState, Device, Face, FrontFace, PolygonMode, PrimitiveState, PrimitiveTopology,
-    SamplerBindingType, ShaderStages, TextureFormat, TextureSampleType, TextureViewDimension,
+    BindingType, Buffer, BufferAddress, CompareFunction, DepthStencilState, Device, Face,
+    FrontFace, PolygonMode, PrimitiveState, PrimitiveTopology, SamplerBindingType, ShaderStages,
+    TextureFormat, TextureSampleType, TextureViewDimension,
 };
 use zerocopy::AsBytes;
 
@@ -54,7 +53,6 @@ pub struct UIElementRenderer {
     sprite: Option<UIElementSprite>,
     sprite_texture_bind_group: Option<Arc<BindGroup>>,
     sprite_sampler_bind_group: Option<Arc<BindGroup>>,
-    vertex_buffer: Option<GenericBufferAllocation<Buffer>>,
 }
 
 impl UIElementRenderer {
@@ -92,7 +90,6 @@ impl UIElementRenderer {
             sprite: None,
             sprite_texture_bind_group: None,
             sprite_sampler_bind_group: None,
-            vertex_buffer: None,
         }
     }
 
@@ -160,31 +157,12 @@ impl UIElementRenderer {
                 }],
             })));
         self.sprite = Some(sprite);
-
-        // Since ui elements are always left-bottom based, positions must in range [0, 1].
-        let vertices = vec![
-            0.0f32, 0.0f32, 0.0f32, // bottom left position
-            1.0f32, 0.0f32, 0.0f32, // bottom right position
-            1.0f32, 1.0f32, 0.0f32, // top right position
-            0.0f32, 0.0f32, 0.0f32, // bottom left position
-            1.0f32, 1.0f32, 0.0f32, // top right position
-            0.0f32, 1.0f32, 0.0f32, // top left position
-        ];
-
-        self.vertex_buffer = Some(GenericBufferAllocation::new(
-            device.create_buffer_init(&BufferInitDescriptor {
-                label: None,
-                contents: vertices.as_bytes(),
-                usage: BufferUsages::VERTEX,
-            }),
-            0,
-            BufferSize::new((size_of::<f32>() * vertices.len()) as u64).unwrap(),
-        ));
     }
 
     pub fn sub_renderer(
         &mut self,
         size: UISize,
+        standard_ui_vertex_buffer: &GenericBufferAllocation<Buffer>,
         shader_mgr: &ShaderManager,
         pipeline_cache: &mut PipelineCache,
     ) -> Option<UIElementSubRenderer> {
@@ -192,7 +170,6 @@ impl UIElementRenderer {
             .pipeline_provider
             .obtain_pipeline(shader_mgr, pipeline_cache)?;
         let material = self.pipeline_provider.material().cloned()?;
-        let vertex_buffer = self.vertex_buffer.clone()?;
         let sprite = self.sprite.clone()?;
         let sprite_texture_bind_group = self.sprite_texture_bind_group.clone()?;
         let sprite_sampler_bind_group = self.sprite_sampler_bind_group.clone()?;
@@ -208,7 +185,9 @@ impl UIElementRenderer {
                 sprite_texture_bind_group,
                 sprite_sampler_bind_group,
             },
-            vertex_buffer_provider: UIElementRendererVertexBufferProvider { vertex_buffer },
+            vertex_buffer_provider: UIElementRendererVertexBufferProvider {
+                vertex_buffer: standard_ui_vertex_buffer.clone(),
+            },
             instance_data_provider: UIElementRendererInstanceDataProvider {
                 sprite,
                 size,

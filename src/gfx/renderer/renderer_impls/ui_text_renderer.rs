@@ -42,7 +42,6 @@ pub struct UITextRenderer {
     glyphs: Vec<Glyph>,
     layout: Layout,
     layout_config: GlyphLayoutConfig,
-    vertex_buffer: Option<GenericBufferAllocation<Buffer>>,
 }
 
 impl UITextRenderer {
@@ -85,7 +84,6 @@ impl UITextRenderer {
             glyphs: Vec::new(),
             layout: Layout::new(CoordinateSystem::PositiveYUp),
             layout_config: Default::default(),
-            vertex_buffer: None,
         }
     }
 
@@ -168,6 +166,7 @@ impl UITextRenderer {
 
     pub fn sub_renderers<'a>(
         &'a mut self,
+        standard_ui_vertex_buffer: &GenericBufferAllocation<Buffer>,
         shader_mgr: &ShaderManager,
         pipeline_cache: &mut PipelineCache,
     ) -> Option<Vec<UITextSubRenderer>> {
@@ -175,7 +174,6 @@ impl UITextRenderer {
             .pipeline_provider
             .obtain_pipeline(shader_mgr, pipeline_cache)?;
         let material = self.pipeline_provider.material().cloned()?;
-        let vertex_buffer = self.vertex_buffer.as_ref()?;
 
         let groups = self
             .glyphs
@@ -203,7 +201,7 @@ impl UITextRenderer {
                         glyph_sampler_bind_group,
                     },
                     vertex_buffer_provider: UITextRendererVertexBufferProvider {
-                        vertex_buffer: vertex_buffer.clone(),
+                        vertex_buffer: standard_ui_vertex_buffer.clone(),
                     },
                     instance_data_provider: UITextRendererInstanceDataProvider {
                         glyphs,

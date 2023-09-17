@@ -1,14 +1,18 @@
 use super::{
     build_rendering_command, BindGroupLayoutCache, CameraClearMode, DepthStencil, DepthStencilMode,
-    FrameBufferAllocator, GfxContextHandle, PipelineCache, PipelineLayoutCache, Renderer,
-    RenderingCommand,
+    FrameBufferAllocator, GenericBufferAllocation, GfxContextHandle, PipelineCache,
+    PipelineLayoutCache, Renderer, RenderingCommand,
 };
 use crate::object::{ObjectHierarchy, ObjectId};
+use std::mem::size_of;
 use wgpu::{
-    Color, CommandBuffer, CommandEncoder, CommandEncoderDescriptor, LoadOp, Operations, RenderPass,
-    RenderPassColorAttachment, RenderPassDepthStencilAttachment, SurfaceError, TextureView,
+    util::{BufferInitDescriptor, DeviceExt},
+    Buffer, BufferSize, BufferUsages, Color, CommandBuffer, CommandEncoder,
+    CommandEncoderDescriptor, LoadOp, Operations, RenderPass, RenderPassColorAttachment,
+    RenderPassDepthStencilAttachment, SurfaceError, TextureView,
 };
 use winit::dpi::PhysicalSize;
+use zerocopy::AsBytes;
 
 pub struct RenderManager {
     gfx_ctx: GfxContextHandle,
@@ -17,6 +21,7 @@ pub struct RenderManager {
     pipeline_layout_cache: PipelineLayoutCache,
     pipeline_cache: PipelineCache,
     frame_buffer_allocator: FrameBufferAllocator,
+    standard_ui_vertex_buffer: GenericBufferAllocation<Buffer>,
 }
 
 impl RenderManager {
@@ -31,6 +36,25 @@ impl RenderManager {
         let pipeline_cache = PipelineCache::new(gfx_ctx.clone());
         let frame_buffer_allocator = FrameBufferAllocator::new(gfx_ctx.clone());
 
+        // Since ui elements are always left-bottom based, positions must in range [0, 1].
+        let standard_ui_vertices = vec![
+            0.0f32, 0.0f32, 0.0f32, // bottom left position
+            1.0f32, 0.0f32, 0.0f32, // bottom right position
+            1.0f32, 1.0f32, 0.0f32, // top right position
+            0.0f32, 0.0f32, 0.0f32, // bottom left position
+            1.0f32, 1.0f32, 0.0f32, // top right position
+            0.0f32, 1.0f32, 0.0f32, // top left position
+        ];
+        let standard_ui_vertex_buffer = GenericBufferAllocation::new(
+            gfx_ctx.device.create_buffer_init(&BufferInitDescriptor {
+                label: None,
+                contents: standard_ui_vertices.as_bytes(),
+                usage: BufferUsages::VERTEX,
+            }),
+            0,
+            BufferSize::new((size_of::<f32>() * standard_ui_vertices.len()) as u64).unwrap(),
+        );
+
         Self {
             gfx_ctx,
             depth_stencil,
@@ -38,6 +62,7 @@ impl RenderManager {
             pipeline_layout_cache,
             pipeline_cache,
             frame_buffer_allocator,
+            standard_ui_vertex_buffer,
         }
     }
 
@@ -51,6 +76,10 @@ impl RenderManager {
 
     pub fn pipeline_cache(&mut self) -> &mut PipelineCache {
         &mut self.pipeline_cache
+    }
+
+    pub fn standard_ui_vertex_buffer(&self) -> &GenericBufferAllocation<Buffer> {
+        &self.standard_ui_vertex_buffer
     }
 
     pub fn resize(&mut self, size: PhysicalSize<u32>) {
