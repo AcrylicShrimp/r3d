@@ -4,7 +4,7 @@ use r3d::{
     gfx::{Camera, CameraClearMode, CameraPerspectiveProjectionAspect, CameraProjection, Color},
     math::Vec2,
     object::ObjectHandle,
-    specs::{Builder, WorldExt},
+    specs::Builder,
     ui::{UIAnchor, UIElement, UIMargin, UIScaleMode, UIScaler, UISize},
     ContextHandle, Engine, EngineConfig, EngineExecError, EngineInitError, EngineLoopMode,
     EngineTargetFps,
@@ -127,18 +127,16 @@ fn init(ctx: ContextHandle) {
     }
 
     ctx.event_mgr()
-        .add_handler(EventHandler::<event_types::Update>::new(|ctx, _| {
-            update(ctx)
-        }));
+        .add_handler(EventHandler::<event_types::Update>::new(|_| update()));
     ctx.event_mgr()
-        .add_handler(EventHandler::<event_types::LateUpdate>::new(|ctx, _| {
-            late_update(ctx)
+        .add_handler(EventHandler::<event_types::LateUpdate>::new(|_| {
+            late_update()
         }));
 }
 
-fn update(ctx: &ContextHandle) {}
+fn update() {}
 
-fn late_update(ctx: &ContextHandle) {
+fn late_update() {
     // let world = ctx.world();
     // let sizes = world.read_component::<UISize>();
     // let ui_root_size = sizes.get(use_app().ui_root.entity).unwrap();
