@@ -4,7 +4,7 @@ use crate::{
 };
 use specs::{prelude::*, Component};
 
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Copy, Component)]
 #[storage(HashMapStorage)]
 pub struct UISize {
     pub width: f32,
