@@ -1,4 +1,4 @@
-use super::{generate_sdf, GlyphSprite, GlyphTexture};
+use super::{generate_sdf, GlyphSprite, GlyphSpriteHandle, GlyphTexture};
 use crate::{
     gfx::{Font, FontHandle, GfxContextHandle},
     use_context,
@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 pub struct GlyphManager {
     gfx_ctx: GfxContextHandle,
-    glyphs: HashMap<GlyphRasterConfig, GlyphSprite>,
+    glyphs: HashMap<GlyphRasterConfig, GlyphSpriteHandle>,
     glyph_textures: HashMap<*const Font, Vec<GlyphTexture>>,
 }
 
@@ -21,7 +21,7 @@ impl GlyphManager {
         }
     }
 
-    pub fn glyph(&mut self, font: &FontHandle, glyph: GlyphRasterConfig) -> &GlyphSprite {
+    pub fn glyph(&mut self, font: &FontHandle, glyph: GlyphRasterConfig) -> GlyphSpriteHandle {
         if !self.glyphs.contains_key(&glyph) {
             let (metrics, rasterized) = font
                 .data
@@ -47,14 +47,14 @@ impl GlyphManager {
                 ) {
                     self.glyphs.insert(
                         glyph,
-                        GlyphSprite::new(
+                        GlyphSpriteHandle::new(GlyphSprite::new(
                             glyph_texture.texture_bind_group().clone(),
                             glyph_texture.sampler_bind_group().clone(),
                             glyph_texture.texture().clone(),
                             mapping,
-                        ),
+                        )),
                     );
-                    return self.glyphs.get(&glyph).unwrap();
+                    return self.glyphs.get(&glyph).unwrap().clone();
                 }
             }
 
@@ -74,16 +74,16 @@ impl GlyphManager {
                 .unwrap();
             self.glyphs.insert(
                 glyph,
-                GlyphSprite::new(
+                GlyphSpriteHandle::new(GlyphSprite::new(
                     glyph_texture.texture_bind_group().clone(),
                     glyph_texture.sampler_bind_group().clone(),
                     glyph_texture.texture().clone(),
                     mapping,
-                ),
+                )),
             );
             glyph_textures.push(glyph_texture);
         }
 
-        self.glyphs.get(&glyph).unwrap()
+        self.glyphs.get(&glyph).unwrap().clone()
     }
 }

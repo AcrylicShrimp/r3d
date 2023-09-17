@@ -1,8 +1,9 @@
 use crate::gfx::{SpriteTexelMapping, TextureHandle};
+use codegen::Handle;
 use std::sync::Arc;
 use wgpu::BindGroup;
 
-#[derive(Clone)]
+#[derive(Handle)]
 pub struct GlyphSprite {
     texture_bind_group: Arc<BindGroup>,
     sampler_bind_group: Arc<BindGroup>,
