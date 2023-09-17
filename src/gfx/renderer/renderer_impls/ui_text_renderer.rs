@@ -350,8 +350,8 @@ impl InstanceDataProvider for UITextRendererInstanceDataProvider {
                 let mapping = glyph.sprite.mapping();
                 buffer.copy_from_slice(
                     [
-                        mapping.x_min as f32 / glyph.sprite.width() as f32,
-                        mapping.y_min as f32 / glyph.sprite.height() as f32,
+                        mapping.x_min as f32 / glyph.sprite.texture().width as f32,
+                        mapping.y_min as f32 / glyph.sprite.texture().height as f32,
                     ]
                     .as_bytes(),
                 );
@@ -361,8 +361,8 @@ impl InstanceDataProvider for UITextRendererInstanceDataProvider {
                 let mapping = glyph.sprite.mapping();
                 buffer.copy_from_slice(
                     [
-                        mapping.x_max as f32 / glyph.sprite.width() as f32,
-                        mapping.y_max as f32 / glyph.sprite.height() as f32,
+                        mapping.x_max as f32 / glyph.sprite.texture().width as f32,
+                        mapping.y_max as f32 / glyph.sprite.texture().height as f32,
                     ]
                     .as_bytes(),
                 );
