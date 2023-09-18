@@ -101,6 +101,7 @@ pub struct ObjectHierarchy {
     objects: Vec<ObjectId>,
     object_entities: Vec<Entity>,
     object_dirties: BitVec,
+    object_current_frame_dirties: BitVec,
     object_actives: BitVec,
     object_active_selfs: BitVec,
     // unordered
@@ -132,6 +133,10 @@ impl ObjectHierarchy {
 
     pub fn is_dirty(&self, object: ObjectId) -> bool {
         self.object_dirties[self.object_spans[object.get() as usize].index as usize]
+    }
+
+    pub fn is_current_frame_dirty(&self, object: ObjectId) -> bool {
+        self.object_current_frame_dirties[self.object_spans[object.get() as usize].index as usize]
     }
 
     pub fn is_active(&self, object: ObjectId) -> bool {
@@ -194,6 +199,11 @@ impl ObjectHierarchy {
     pub fn set_dirty(&mut self, object: ObjectId) {
         self.object_dirties.as_mut_bitslice()[self.object_spans[object.get() as usize].to_range()]
             .fill(true);
+    }
+
+    pub fn copy_dirty_to_current_frame(&mut self) {
+        self.object_current_frame_dirties
+            .copy_from_bitslice(&self.object_dirties);
     }
 
     pub fn set_active(&mut self, object: ObjectId, is_active: bool) {
@@ -262,6 +272,7 @@ impl ObjectHierarchy {
         self.objects.push(object);
         self.object_entities.push(entity);
         self.object_dirties.push(true);
+        self.object_current_frame_dirties.push(true);
         self.object_actives.push(true);
         self.object_active_selfs.push(true);
     }
@@ -308,6 +319,14 @@ impl ObjectHierarchy {
 
         self.object_dirties
             .truncate(self.object_dirties.len() - span_count);
+
+        if span_index + span_count < self.object_current_frame_dirties.len() {
+            self.object_current_frame_dirties
+                .copy_within(span_index + span_count.., span_index);
+        }
+
+        self.object_current_frame_dirties
+            .truncate(self.object_current_frame_dirties.len() - span_count);
 
         if span_index + span_count < self.object_actives.len() {
             self.object_actives
@@ -491,6 +510,13 @@ impl ObjectHierarchy {
         self.object_dirties[temp_dest..temp_dest + temp.len()]
             .copy_from_bitslice(&temp_object_dirties);
 
+        let temp_object_current_frame_dirties =
+            self.object_current_frame_dirties[temp.clone()].to_bitvec();
+        self.object_current_frame_dirties
+            .copy_within(src.clone(), dest);
+        self.object_current_frame_dirties[temp_dest..temp_dest + temp.len()]
+            .copy_from_bitslice(&temp_object_current_frame_dirties);
+
         let temp_object_actives = self.object_actives[temp.clone()].to_bitvec();
         self.object_actives.copy_within(src.clone(), dest);
         self.object_actives[temp_dest..temp_dest + temp.len()]
@@ -509,6 +535,7 @@ impl Default for ObjectHierarchy {
             objects: Vec::with_capacity(1024),
             object_entities: Vec::with_capacity(1024),
             object_dirties: BitVec::with_capacity(1024),
+            object_current_frame_dirties: BitVec::with_capacity(1024),
             object_actives: BitVec::with_capacity(1024),
             object_active_selfs: BitVec::with_capacity(1024),
 

@@ -314,6 +314,8 @@ impl Engine {
                         let mut object_mgr = self.ctx.object_mgr_mut();
                         let object_hierarchy = object_mgr.object_hierarchy_mut();
 
+                        object_hierarchy.copy_dirty_to_current_frame();
+
                         let transforms = world.read_component::<Transform>();
                         object_hierarchy.update_object_matrices(|entity| transforms.get(entity));
                     }
@@ -354,6 +356,8 @@ impl Engine {
                         let world = self.ctx.world();
                         let mut object_mgr = self.ctx.object_mgr_mut();
                         let object_hierarchy = object_mgr.object_hierarchy_mut();
+
+                        object_hierarchy.copy_dirty_to_current_frame();
 
                         let transforms = world.read_component::<Transform>();
                         object_hierarchy.update_object_matrices(|entity| transforms.get(entity));
