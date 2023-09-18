@@ -88,5 +88,11 @@ impl ObjectManager {
         self.object_hierarchy.remove(handle.object_id);
         self.object_id_allocator.dealloc(handle.object_id);
         self.object_name_registry.set_name(handle.object_id, None);
+
+        use_context().ui_raycast_mgr_mut().remove_object(handle);
+        use_context()
+            .object_event_mgr()
+            .remove_handler_for(handle.object_id);
+        use_context().ui_event_mgr_mut().remove_object(handle);
     }
 }
