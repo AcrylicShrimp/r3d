@@ -9,3 +9,15 @@ pub struct Font {
     pub sdf_radius: usize,
     pub sdf_cutoff: f32,
 }
+
+impl Font {
+    pub fn with_default(data: FontDueFont) -> Self {
+        Self {
+            data,
+            sdf_font_size: 128f32,
+            sdf_inset: 12usize,
+            sdf_radius: 12usize,
+            sdf_cutoff: 0.45f32,
+        }
+    }
+}

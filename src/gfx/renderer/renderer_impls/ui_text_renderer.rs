@@ -77,7 +77,7 @@ impl UITextRenderer {
             color: Color::white(),
             font_size: 16f32,
             thickness: 0.5f32,
-            smoothness: 0.125f32,
+            smoothness: 16f32 / 1000f32,
             pipeline_provider,
             font: None,
             text: None,
@@ -138,10 +138,22 @@ impl UITextRenderer {
         self.is_dirty = true;
     }
 
+    /// Sets the font size and recommended values for thickness and smoothness.
+    pub fn set_font_size_with_recommended_values(&mut self, font_size: f32) {
+        self.font_size = font_size;
+        self.thickness = 0.5f32;
+        self.smoothness = font_size / 1000f32;
+        self.is_dirty = true;
+    }
+
+    /// Sets the thickness of the glyph outlines.
+    /// Recommended value is 0.5.
     pub fn set_thickness(&mut self, thickness: f32) {
         self.thickness = thickness;
     }
 
+    /// Sets the smoothness of the glyph outlines.
+    /// Recommended value is font_size / 1000.
     pub fn set_smoothness(&mut self, smoothness: f32) {
         self.smoothness = smoothness;
     }
