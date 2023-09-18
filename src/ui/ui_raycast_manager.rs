@@ -3,8 +3,9 @@ use crate::{
     math::{Vec2, Vec4},
     object::ObjectHandle,
     transform::TransformComponent,
+    use_context,
 };
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 /// Grid width in pixels.
 pub const GRID_WIDTH: u64 = 128;
@@ -40,39 +41,10 @@ impl CellAddress {
     }
 }
 
-#[derive(Clone)]
-struct OrderedObject {
-    pub index: u32,
-    pub object: ObjectHandle,
-}
-
-impl PartialEq for OrderedObject {
-    fn eq(&self, other: &Self) -> bool {
-        self.index == other.index
-    }
-}
-
-impl Eq for OrderedObject {}
-
-impl PartialOrd for OrderedObject {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.index.partial_cmp(&other.index)
-    }
-}
-
-impl Ord for OrderedObject {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.index.cmp(&other.index)
-    }
-}
-
-/// Maintains a grid of objects for fast raycasting. All objects added to the grid should be rebuilt when they have been changed.
-/// Changes include:
-/// - Dirty flag of transform component is set.
-/// - Hierarchical order of object is changed e.g. parent is changed, other object is added to the parent, etc.
+/// Maintains a grid of objects for fast raycasting. All objects added to the grid should be rebuilt when they have been moved.
 pub struct UIRaycastManager {
     objects: HashMap<ObjectHandle, CellAddress>,
-    cells: HashMap<CellIndex, BTreeSet<OrderedObject>>,
+    cells: HashMap<CellIndex, Vec<ObjectHandle>>,
 }
 
 impl UIRaycastManager {
@@ -92,13 +64,8 @@ impl UIRaycastManager {
         let address = compute_aabb_cell_address(&object);
         self.objects.insert(object.clone(), address);
 
-        let key = OrderedObject {
-            index: object.index(),
-            object: object.clone(),
-        };
-
         for index in address.to_indices_iter() {
-            self.cells.entry(index).or_default().insert(key.clone());
+            self.cells.entry(index).or_default().push(object.clone());
         }
     }
 
@@ -110,14 +77,11 @@ impl UIRaycastManager {
             return;
         };
 
-        let key = OrderedObject {
-            index: object.index(),
-            object: object.clone(),
-        };
-
         for index in address.to_indices_iter() {
             if let Some(cell) = self.cells.get_mut(&index) {
-                cell.remove(&key);
+                if let Some(position) = cell.iter().position(|o| o == object) {
+                    cell.remove(position);
+                }
             }
         }
     }
@@ -128,13 +92,18 @@ impl UIRaycastManager {
         let x = (point.x / GRID_WIDTH as f32).round() as i8;
         let y = (point.y / GRID_HEIGHT as f32).round() as i8;
 
-        let cell = if let Some(cell) = self.cells.get(&CellIndex { x, y }) {
+        let cell = if let Some(cell) = self.cells.get_mut(&CellIndex { x, y }) {
             cell
         } else {
             return None;
         };
 
-        for object in cell {
+        let ctx = use_context();
+        let object_mgr = ctx.object_mgr();
+        let object_hierarchy = object_mgr.object_hierarchy();
+        cell.sort_unstable_by_key(|object| object_hierarchy.index(object.object_id));
+
+        for object in cell.iter_mut().rev() {
             let inverse_matrix = object
                 .component::<TransformComponent>()
                 .world_inverse_matrix();
