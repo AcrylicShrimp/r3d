@@ -96,10 +96,10 @@ fn compute_pair(
     };
     let element = elements.get(pair.child).unwrap();
 
-    let margin_left = parent_width * (element.anchor.min.x - 0.5f32);
-    let margin_bottom = parent_height * (element.anchor.min.y - 0.5f32);
-    let margin_right = parent_width * (element.anchor.max.x - 0.5f32);
-    let margin_top = parent_height * (element.anchor.max.y - 0.5f32);
+    let margin_left = parent_width * element.anchor.min.x;
+    let margin_bottom = parent_height * element.anchor.min.y;
+    let margin_right = parent_width * element.anchor.max.x;
+    let margin_top = parent_height * element.anchor.max.y;
 
     let width = margin_right - margin_left - element.margin.left - element.margin.right;
     let height = margin_top - margin_bottom - element.margin.bottom - element.margin.top;

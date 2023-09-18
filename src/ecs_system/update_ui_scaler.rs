@@ -132,7 +132,7 @@ fn compute_pair(
     };
 
     let transform = transforms.get_mut(pair.child).unwrap();
-    transform.position = Vec3::ZERO;
+    transform.position = Vec3::new(width * -0.5f32, height * -0.5f32, 0.0f32);
 
     let size = sizes.get_mut(pair.child).unwrap();
     size.width = width;
