@@ -1,16 +1,16 @@
 use crate::{
     gfx::{
-        semantic_bindings,
+        compute_glyph_layout, semantic_bindings,
         semantic_inputs::{self, KEY_POSITION},
-        BindGroupProvider, CachedPipeline, Color, FontHandle, GenericBufferAllocation,
-        GlyphLayoutConfig, GlyphManager, GlyphSpriteHandle, HostBuffer, InstanceDataProvider,
-        Material, MaterialHandle, PipelineCache, PipelineProvider, Renderer,
+        BindGroupLayoutCache, BindGroupProvider, CachedPipeline, Color, FontHandle,
+        GenericBufferAllocation, GlyphLayoutConfig, GlyphManager, GlyphSpriteHandle, HostBuffer,
+        InstanceDataProvider, Material, MaterialHandle, PipelineCache, PipelineProvider, Renderer,
         RendererVertexBufferAttribute, RendererVertexBufferLayout, SemanticShaderBindingKey,
         SemanticShaderInputKey, ShaderManager, VertexBuffer, VertexBufferProvider,
     },
     math::Vec2,
+    ui::UISize,
 };
-use fontdue::layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle};
 use itertools::Itertools;
 use parking_lot::RwLockReadGuard;
 use specs::{prelude::*, Component};
@@ -40,8 +40,8 @@ pub struct UITextRenderer {
     font: Option<FontHandle>,
     text: Option<String>,
     glyphs: Vec<Glyph>,
-    layout: Layout,
     layout_config: GlyphLayoutConfig,
+    is_dirty: bool,
 }
 
 impl UITextRenderer {
@@ -82,8 +82,8 @@ impl UITextRenderer {
             font: None,
             text: None,
             glyphs: Vec::new(),
-            layout: Layout::new(CoordinateSystem::PositiveYUp),
             layout_config: Default::default(),
+            is_dirty: true,
         }
     }
 
@@ -119,13 +119,9 @@ impl UITextRenderer {
         &self.layout_config
     }
 
-    pub fn with_config<R>(
-        &mut self,
-        glyph_mgr: &mut GlyphManager,
-        f: impl FnOnce(&mut GlyphLayoutConfig) -> R,
-    ) -> R {
+    pub fn with_config<R>(&mut self, f: impl FnOnce(&mut GlyphLayoutConfig) -> R) -> R {
         let r = f(&mut self.layout_config);
-        self.update_glyphs(glyph_mgr);
+        self.is_dirty = true;
         r
     }
 
@@ -137,9 +133,9 @@ impl UITextRenderer {
         self.color = color;
     }
 
-    pub fn set_font_size(&mut self, glyph_mgr: &mut GlyphManager, font_size: f32) {
+    pub fn set_font_size(&mut self, font_size: f32) {
         self.font_size = font_size;
-        self.update_glyphs(glyph_mgr);
+        self.is_dirty = true;
     }
 
     pub fn set_thickness(&mut self, thickness: f32) {
@@ -154,22 +150,28 @@ impl UITextRenderer {
         self.pipeline_provider.set_material(material);
     }
 
-    pub fn set_font(&mut self, glyph_mgr: &mut GlyphManager, font: FontHandle) {
+    pub fn set_font(&mut self, font: FontHandle) {
         self.font = Some(font);
-        self.update_glyphs(glyph_mgr);
+        self.is_dirty = true;
     }
 
-    pub fn set_text(&mut self, glyph_mgr: &mut GlyphManager, text: String) {
+    pub fn set_text(&mut self, text: String) {
         self.text = Some(text);
-        self.update_glyphs(glyph_mgr);
+        self.is_dirty = true;
     }
 
     pub fn sub_renderers<'a>(
         &'a mut self,
+        is_dirty: bool,
+        size: UISize,
         standard_ui_vertex_buffer: &GenericBufferAllocation<Buffer>,
         shader_mgr: &ShaderManager,
+        glyph_mgr: &mut GlyphManager,
         pipeline_cache: &mut PipelineCache,
+        bind_group_layout_cache: &mut BindGroupLayoutCache,
     ) -> Option<Vec<UITextSubRenderer>> {
+        self.update_glyphs(is_dirty, size, glyph_mgr, bind_group_layout_cache);
+
         let pipeline = self
             .pipeline_provider
             .obtain_pipeline(shader_mgr, pipeline_cache)?;
@@ -214,41 +216,43 @@ impl UITextRenderer {
         )))
     }
 
-    fn update_glyphs(&mut self, glyph_mgr: &mut GlyphManager) {
+    fn update_glyphs(
+        &mut self,
+        is_dirty: bool,
+        size: UISize,
+        glyph_mgr: &mut GlyphManager,
+        bind_group_layout_cache: &mut BindGroupLayoutCache,
+    ) {
+        if !self.is_dirty && !is_dirty {
+            return;
+        }
+
         let (font, text) = match (&self.font, &self.text) {
             (Some(font), Some(text)) => (font, text),
             _ => return,
         };
 
-        self.layout.reset(&LayoutSettings {
-            x: 0f32,
-            y: 0f32,
-            max_width: None,
-            max_height: None,
-            horizontal_align: self.layout_config.horizontal_align,
-            vertical_align: self.layout_config.vertical_align,
-            line_height: 1f32,
-            wrap_style: self.layout_config.wrap_style,
-            wrap_hard_breaks: self.layout_config.wrap_hard_breaks,
-        });
-        self.layout.append(
-            &[&font.data],
-            &TextStyle::new(text.as_ref(), self.font_size, 0),
-        );
-
         self.glyphs.clear();
 
-        for glyph in self.layout.glyphs() {
+        for glyph in compute_glyph_layout(
+            font,
+            self.font_size,
+            size,
+            &self.layout_config,
+            text.chars(),
+        ) {
             self.glyphs.push(Glyph {
-                // TODO: Compute this properly.
-                size: Vec2::new(glyph.width as f32, glyph.height as f32),
-                offset: Vec2::new(glyph.x, glyph.y),
-                sprite: glyph_mgr.glyph(font, glyph.key).clone(),
+                size: glyph.size,
+                offset: glyph.offset,
+                sprite: glyph_mgr
+                    .glyph(bind_group_layout_cache, font, glyph.key)
+                    .clone(),
             });
         }
 
         self.glyphs
             .sort_unstable_by_key(|glyph| Arc::as_ptr(glyph.sprite.texture_bind_group()));
+        self.is_dirty = false;
     }
 }
 

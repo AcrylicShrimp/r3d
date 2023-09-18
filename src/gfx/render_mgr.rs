@@ -78,6 +78,10 @@ impl RenderManager {
         &mut self.pipeline_cache
     }
 
+    pub fn split_caches(&mut self) -> (&mut BindGroupLayoutCache, &mut PipelineCache) {
+        (&mut self.bind_group_layout_cache, &mut self.pipeline_cache)
+    }
+
     pub fn standard_ui_vertex_buffer(&self) -> &GenericBufferAllocation<Buffer> {
         &self.standard_ui_vertex_buffer
     }

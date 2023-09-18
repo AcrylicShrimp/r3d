@@ -1,6 +1,6 @@
 use super::{generate_sdf, GlyphSprite, GlyphSpriteHandle, GlyphTexture};
 use crate::{
-    gfx::{Font, FontHandle, GfxContextHandle},
+    gfx::{BindGroupLayoutCache, Font, FontHandle, GfxContextHandle},
     use_context,
 };
 use fontdue::layout::GlyphRasterConfig;
@@ -21,7 +21,12 @@ impl GlyphManager {
         }
     }
 
-    pub fn glyph(&mut self, font: &FontHandle, glyph: GlyphRasterConfig) -> GlyphSpriteHandle {
+    pub fn glyph(
+        &mut self,
+        bind_group_layout_cache: &mut BindGroupLayoutCache,
+        font: &FontHandle,
+        glyph: GlyphRasterConfig,
+    ) -> GlyphSpriteHandle {
         if !self.glyphs.contains_key(&glyph) {
             let (metrics, rasterized) = font
                 .data
@@ -59,11 +64,8 @@ impl GlyphManager {
             }
 
             let ctx = use_context();
-            let mut glyph_texture = GlyphTexture::new(
-                &ctx.gfx_ctx.device,
-                ctx.render_mgr_mut().bind_group_layout_cache(),
-                font.clone(),
-            );
+            let mut glyph_texture =
+                GlyphTexture::new(&ctx.gfx_ctx.device, bind_group_layout_cache, font.clone());
             let mapping = glyph_texture
                 .glyph(
                     &self.gfx_ctx.queue,

@@ -76,6 +76,7 @@ impl<'a> System<'a> for RenderSystem {
         ): Self::SystemData,
     ) {
         let context = use_context();
+        let mut glyph_mgr = context.glyph_mgr_mut();
         let mut render_mgr = context.render_mgr_mut();
         let shader_mgr = context.shader_mgr();
         let world_mgr = context.object_mgr();
@@ -104,7 +105,7 @@ impl<'a> System<'a> for RenderSystem {
 
         for (object, camera) in camera_objects {
             let standard_ui_vertex_buffer = render_mgr.standard_ui_vertex_buffer().clone();
-            let pipeline_cache = render_mgr.pipeline_cache();
+            let (bind_group_layout_cache, pipeline_cache) = render_mgr.split_caches();
 
             if !object_hierarchy.is_active(object.object_id()) {
                 continue;
@@ -168,7 +169,9 @@ impl<'a> System<'a> for RenderSystem {
                 ));
             }
 
-            for (object, ui_text_renderer) in (&objects, &mut ui_text_renderers).join() {
+            for (object, ui_text_renderer, ui_size) in
+                (&objects, &mut ui_text_renderers, &ui_sizes).join()
+            {
                 let object_id = object.object_id();
 
                 if !object_hierarchy.is_active(object.object_id()) {
@@ -180,9 +183,13 @@ impl<'a> System<'a> for RenderSystem {
                 }
 
                 let renderers = if let Some(renderers) = ui_text_renderer.sub_renderers(
+                    object_hierarchy.is_current_frame_dirty(object_id),
+                    *ui_size,
                     &standard_ui_vertex_buffer,
                     shader_mgr,
+                    &mut glyph_mgr,
                     pipeline_cache,
+                    bind_group_layout_cache,
                 ) {
                     renderers
                 } else {
