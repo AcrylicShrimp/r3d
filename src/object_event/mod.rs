@@ -4,6 +4,7 @@ use std::any::Any;
 mod object_event_bus;
 mod object_event_dispatcher;
 mod object_event_handler;
+pub mod object_event_types;
 
 pub use object_event_bus::*;
 pub use object_event_dispatcher::*;
@@ -26,6 +27,10 @@ impl ObjectEventManager {
 
     pub fn remove_handler(&self, handler_id: ObjectEventHandlerId) {
         self.bus.remove_handler(handler_id);
+    }
+
+    pub fn remove_handler_for(&self, object_id: ObjectId) {
+        self.bus.remove_handler_for(object_id);
     }
 
     pub fn dispatch<T: Any>(&self, object_id: ObjectId, event: &T) {

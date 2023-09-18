@@ -75,6 +75,16 @@ impl ObjectEventBus {
         dispatcher.dispatcher().remove_untyped_handler(handler_id);
     }
 
+    pub fn remove_handler_for(&self, object_id: ObjectId) {
+        let dispatchers = self.dispatchers.lock();
+
+        for dispatcher in dispatchers.values() {
+            dispatcher
+                .dispatcher()
+                .remove_untyped_handler_for(object_id);
+        }
+    }
+
     pub fn dispatch<T: Any>(&self, object_id: ObjectId, event: &T) {
         let dispatcher = if let Some(dispatcher) = self.dispatchers.lock().get(&TypeId::of::<T>()) {
             dispatcher.clone()
