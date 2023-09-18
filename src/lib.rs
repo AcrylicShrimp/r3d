@@ -17,6 +17,7 @@ use ecs_system::{
 use event::{event_types, EventManager};
 use gfx::{GlyphManager, MeshRenderer, UIElementRenderer, UITextRenderer};
 use input::InputManager;
+use math::Vec2;
 use object::{Object, ObjectManager};
 use object_event::ObjectEventManager;
 use specs::prelude::*;
@@ -28,7 +29,7 @@ use std::{
 };
 use thiserror::Error;
 use transform::Transform;
-use ui::{UIElement, UIRaycastManager, UIScaler, UISize};
+use ui::{UIElement, UIEventManager, UIRaycastManager, UIScaler, UISize};
 use winit::{
     dpi::{LogicalSize, PhysicalSize},
     event::{Event, WindowEvent},
@@ -72,6 +73,7 @@ pub struct Context {
     glyph_mgr: RefCell<GlyphManager>,
     shader_mgr: ShaderManager,
     ui_raycast_mgr: RefCell<UIRaycastManager>,
+    ui_event_mgr: RefCell<UIEventManager>,
     time_mgr: RefCell<TimeManager>,
     input_mgr: RefCell<InputManager>,
     event_mgr: EventManager,
@@ -93,6 +95,7 @@ impl Context {
         let glyph_mgr = GlyphManager::new(gfx_ctx.clone()).into();
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
         let ui_raycast_mgr = UIRaycastManager::new().into();
+        let ui_event_mgr = UIEventManager::new().into();
         let time_mgr = TimeManager::new().into();
         let input_mgr = InputManager::new().into();
         let event_mgr = EventManager::new();
@@ -108,6 +111,7 @@ impl Context {
             glyph_mgr,
             shader_mgr,
             ui_raycast_mgr,
+            ui_event_mgr,
             time_mgr,
             input_mgr,
             event_mgr,
@@ -173,6 +177,14 @@ impl Context {
 
     pub fn ui_raycast_mgr_mut(&self) -> RefMut<UIRaycastManager> {
         self.ui_raycast_mgr.borrow_mut()
+    }
+
+    pub fn ui_event_mgr(&self) -> Ref<UIEventManager> {
+        self.ui_event_mgr.borrow()
+    }
+
+    pub fn ui_event_mgr_mut(&self) -> RefMut<UIEventManager> {
+        self.ui_event_mgr.borrow_mut()
     }
 
     pub fn time_mgr(&self) -> Ref<TimeManager> {
@@ -320,6 +332,8 @@ impl Engine {
                     update_ui_element.run_now(&self.ctx.world());
                     update_ui_raycast_grid.run_now(&self.ctx.world());
 
+                    self.ctx.ui_event_mgr_mut().handle_mouse_move();
+
                     {
                         let world = self.ctx.world();
                         let mut object_mgr = self.ctx.object_mgr_mut();
@@ -363,6 +377,8 @@ impl Engine {
                     update_ui_scaler.run_now(&self.ctx.world());
                     update_ui_element.run_now(&self.ctx.world());
                     update_ui_raycast_grid.run_now(&self.ctx.world());
+
+                    self.ctx.ui_event_mgr_mut().handle_mouse_move();
 
                     {
                         let world = self.ctx.world();
@@ -413,7 +429,7 @@ impl Engine {
                     event: WindowEvent::CursorLeft { .. },
                     window_id: id,
                 } if id == window_id => {
-                    // TODO: Handle cursor left event here.
+                    self.ctx.ui_event_mgr_mut().handle_mouse_leave();
 
                     return;
                 }
@@ -425,6 +441,14 @@ impl Engine {
                         .input_mgr_mut()
                         .mouse_mut()
                         .handle_window_event(&event);
+
+                    if let WindowEvent::CursorMoved { position, .. } = &event {
+                        let position =
+                            position.to_logical::<f32>(self.ctx.screen_mgr().scale_factor());
+                        self.ctx
+                            .ui_event_mgr_mut()
+                            .update_mouse_position(Vec2::new(position.x, position.y));
+                    }
 
                     return;
                 }
