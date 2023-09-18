@@ -1,10 +1,11 @@
-use super::UISizeComponent;
+use super::{UIElement, UISizeComponent};
 use crate::{
     math::{Vec2, Vec4},
     object::ObjectHandle,
     transform::TransformComponent,
     use_context,
 };
+use specs::WorldExt;
 use std::collections::HashMap;
 
 /// Grid width in pixels.
@@ -99,11 +100,27 @@ impl UIRaycastManager {
         };
 
         let ctx = use_context();
+        let world = ctx.world();
+        let ui_elements = world.read_component::<UIElement>();
         let object_mgr = ctx.object_mgr();
         let object_hierarchy = object_mgr.object_hierarchy();
         cell.sort_unstable_by_key(|object| object_hierarchy.index(object.object_id));
 
         for object in cell.iter_mut().rev() {
+            if !object_hierarchy.is_active(object.object_id) {
+                continue;
+            }
+
+            let ui_element = if let Some(ui_element) = ui_elements.get(object.entity) {
+                ui_element
+            } else {
+                continue;
+            };
+
+            if !ui_element.is_interactable {
+                continue;
+            }
+
             let inverse_matrix = object
                 .component::<TransformComponent>()
                 .world_inverse_matrix();
