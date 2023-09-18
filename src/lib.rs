@@ -18,6 +18,7 @@ use event::{event_types, EventManager};
 use gfx::{GlyphManager, MeshRenderer, UIElementRenderer, UITextRenderer};
 use input::InputManager;
 use object::{Object, ObjectManager};
+use object_event::ObjectEventManager;
 use specs::prelude::*;
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -41,6 +42,7 @@ pub mod gfx;
 pub mod input;
 pub mod math;
 pub mod object;
+pub mod object_event;
 pub mod time;
 pub mod transform;
 pub mod ui;
@@ -73,6 +75,7 @@ pub struct Context {
     time_mgr: RefCell<TimeManager>,
     input_mgr: RefCell<InputManager>,
     event_mgr: EventManager,
+    object_event_mgr: ObjectEventManager,
 }
 
 impl Context {
@@ -93,6 +96,7 @@ impl Context {
         let time_mgr = TimeManager::new().into();
         let input_mgr = InputManager::new().into();
         let event_mgr = EventManager::new();
+        let object_event_mgr = ObjectEventManager::new();
 
         Self {
             window,
@@ -107,6 +111,7 @@ impl Context {
             time_mgr,
             input_mgr,
             event_mgr,
+            object_event_mgr,
         }
     }
 
@@ -188,6 +193,10 @@ impl Context {
 
     pub fn event_mgr(&self) -> &EventManager {
         &self.event_mgr
+    }
+
+    pub fn object_event_mgr(&self) -> &ObjectEventManager {
+        &self.object_event_mgr
     }
 }
 
