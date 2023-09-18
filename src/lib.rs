@@ -12,7 +12,7 @@ use self::{
 use codegen::Handle;
 use ecs_system::{
     make_ui_scaler_dirty::MakeUIScalerDirty, update_ui_element::UpdateUIElement,
-    update_ui_scaler::UpdateUIScaler,
+    update_ui_raycast_grid::UpdateUIRaycastGrid, update_ui_scaler::UpdateUIScaler,
 };
 use event::{event_types, EventManager};
 use gfx::{GlyphManager, MeshRenderer, UIElementRenderer, UITextRenderer};
@@ -261,6 +261,7 @@ impl Engine {
         let mut make_ui_scaler_dirty = MakeUIScalerDirty::new(self.ctx.clone());
         let mut update_ui_scaler = UpdateUIScaler::new(self.ctx.clone());
         let mut update_ui_element = UpdateUIElement::new(self.ctx.clone());
+        let mut update_ui_raycast_grid = UpdateUIRaycastGrid::new(self.ctx.clone());
         let mut update_camera_transform_buffer_system =
             UpdateCameraTransformBufferSystem::new(self.ctx.clone());
         let mut render_system = RenderSystem::new(
@@ -317,6 +318,7 @@ impl Engine {
                     make_ui_scaler_dirty.run_now(&self.ctx.world());
                     update_ui_scaler.run_now(&self.ctx.world());
                     update_ui_element.run_now(&self.ctx.world());
+                    update_ui_raycast_grid.run_now(&self.ctx.world());
 
                     {
                         let world = self.ctx.world();
@@ -360,6 +362,7 @@ impl Engine {
                     make_ui_scaler_dirty.run_now(&self.ctx.world());
                     update_ui_scaler.run_now(&self.ctx.world());
                     update_ui_element.run_now(&self.ctx.world());
+                    update_ui_raycast_grid.run_now(&self.ctx.world());
 
                     {
                         let world = self.ctx.world();
