@@ -136,19 +136,14 @@ impl UIRaycastManager {
 
         for object in cell {
             let inverse_matrix = object
-                .object
                 .component::<TransformComponent>()
                 .world_inverse_matrix();
             let point: Vec2 = (Vec4::new(point.x, point.y, 0.0, 1.0) * &inverse_matrix).into();
-            let size_half = object.object.component::<UISizeComponent>().size() * 0.5;
+            let size = object.component::<UISizeComponent>().size();
 
-            if point.x >= -size_half.x
-                && point.x <= size_half.x
-                && point.y >= -size_half.y
-                && point.y <= size_half.y
-            {
+            if point.x >= -size.x && point.x <= size.x && point.y >= -size.y && point.y <= size.y {
                 // TODO: Should we consider the alpha value of the object?
-                return Some(object.object.clone());
+                return Some(object.clone());
             }
         }
 
@@ -182,12 +177,12 @@ struct AABB {
 
 fn compute_aabb(object: &ObjectHandle) -> AABB {
     let matrix = object.component::<TransformComponent>().world_matrix();
-    let size_half = object.component::<UISizeComponent>().size() * 0.5;
+    let size = object.component::<UISizeComponent>().size();
     let points: [Vec2; 4] = [
-        (Vec4::new(-size_half.x, -size_half.y, 0.0, 1.0) * &matrix).into(),
-        (Vec4::new(size_half.x, -size_half.y, 0.0, 1.0) * &matrix).into(),
-        (Vec4::new(-size_half.x, size_half.y, 0.0, 1.0) * &matrix).into(),
-        (Vec4::new(size_half.x, size_half.y, 0.0, 1.0) * &matrix).into(),
+        (Vec4::new(0.0, 0.0, 0.0, 1.0) * &matrix).into(),
+        (Vec4::new(size.x, 0.0, 0.0, 1.0) * &matrix).into(),
+        (Vec4::new(0.0, size.y, 0.0, 1.0) * &matrix).into(),
+        (Vec4::new(size.x, size.y, 0.0, 1.0) * &matrix).into(),
     ];
 
     let min = points
