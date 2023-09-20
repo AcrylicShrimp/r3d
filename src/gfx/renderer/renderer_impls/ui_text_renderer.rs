@@ -363,22 +363,30 @@ impl InstanceDataProvider for UITextRendererInstanceDataProvider {
             }
             semantic_inputs::KEY_SPRITE_UV_MIN => {
                 let glyph = &self.glyphs[instance as usize];
+                let texel_width_half = 0.5 / glyph.sprite.texture().width as f32;
+                let texel_height_half = 0.5 / glyph.sprite.texture().height as f32;
                 let mapping = glyph.sprite.mapping();
                 buffer.copy_from_slice(
                     [
-                        mapping.x_min as f32 / glyph.sprite.texture().width as f32,
-                        mapping.y_min as f32 / glyph.sprite.texture().height as f32,
+                        mapping.x_min as f32 / glyph.sprite.texture().width as f32
+                            + texel_width_half,
+                        mapping.y_min as f32 / glyph.sprite.texture().height as f32
+                            + texel_height_half,
                     ]
                     .as_bytes(),
                 );
             }
             semantic_inputs::KEY_SPRITE_UV_MAX => {
                 let glyph = &self.glyphs[instance as usize];
+                let texel_width_half = 0.5 / glyph.sprite.texture().width as f32;
+                let texel_height_half = 0.5 / glyph.sprite.texture().height as f32;
                 let mapping = glyph.sprite.mapping();
                 buffer.copy_from_slice(
                     [
-                        mapping.x_max as f32 / glyph.sprite.texture().width as f32,
-                        mapping.y_max as f32 / glyph.sprite.texture().height as f32,
+                        mapping.x_max as f32 / glyph.sprite.texture().width as f32
+                            - texel_width_half,
+                        mapping.y_max as f32 / glyph.sprite.texture().height as f32
+                            - texel_height_half,
                     ]
                     .as_bytes(),
                 );

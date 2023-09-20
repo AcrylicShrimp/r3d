@@ -298,13 +298,18 @@ impl InstanceDataProvider for UIElementRendererInstanceDataProvider {
             semantic_inputs::KEY_SPRITE_UV_MIN => {
                 let uv_min = match &self.sprite {
                     UIElementSprite::Sprite(sprite) => {
+                        let texel_width_half = 0.5 / sprite.texture().width as f32;
+                        let texel_height_half = 0.5 / sprite.texture().height as f32;
                         let mapping = sprite.mapping();
                         [
-                            mapping.x_min as f32 / sprite.texture().width as f32,
-                            mapping.y_min as f32 / sprite.texture().height as f32,
+                            mapping.x_min as f32 / sprite.texture().width as f32 + texel_width_half,
+                            mapping.y_min as f32 / sprite.texture().height as f32
+                                + texel_height_half,
                         ]
                     }
                     UIElementSprite::NinePatch(nine_patch) => {
+                        let texel_width_half = 0.5 / nine_patch.texture().width as f32;
+                        let texel_height_half = 0.5 / nine_patch.texture().height as f32;
                         let x = match instance {
                             0 | 3 | 6 => nine_patch.mapping().x_min,
                             1 | 4 | 7 => nine_patch.mapping().x_mid_left,
@@ -318,8 +323,8 @@ impl InstanceDataProvider for UIElementRendererInstanceDataProvider {
                             _ => return,
                         };
                         [
-                            x as f32 / nine_patch.texture().width as f32,
-                            y as f32 / nine_patch.texture().height as f32,
+                            x as f32 / nine_patch.texture().width as f32 + texel_width_half,
+                            y as f32 / nine_patch.texture().height as f32 + texel_height_half,
                         ]
                     }
                 };
@@ -328,13 +333,18 @@ impl InstanceDataProvider for UIElementRendererInstanceDataProvider {
             semantic_inputs::KEY_SPRITE_UV_MAX => {
                 let uv_min = match &self.sprite {
                     UIElementSprite::Sprite(sprite) => {
+                        let texel_width_half = 0.5 / sprite.texture().width as f32;
+                        let texel_height_half = 0.5 / sprite.texture().height as f32;
                         let mapping = sprite.mapping();
                         [
-                            mapping.x_max as f32 / sprite.texture().width as f32,
-                            mapping.y_max as f32 / sprite.texture().height as f32,
+                            mapping.x_max as f32 / sprite.texture().width as f32 - texel_width_half,
+                            mapping.y_max as f32 / sprite.texture().height as f32
+                                - texel_height_half,
                         ]
                     }
                     UIElementSprite::NinePatch(nine_patch) => {
+                        let texel_width_half = 0.5 / nine_patch.texture().width as f32;
+                        let texel_height_half = 0.5 / nine_patch.texture().height as f32;
                         let x = match instance {
                             0 | 3 | 6 => nine_patch.mapping().x_mid_left,
                             1 | 4 | 7 => nine_patch.mapping().x_mid_right,
@@ -348,8 +358,8 @@ impl InstanceDataProvider for UIElementRendererInstanceDataProvider {
                             _ => return,
                         };
                         [
-                            x as f32 / nine_patch.texture().width as f32,
-                            y as f32 / nine_patch.texture().height as f32,
+                            x as f32 / nine_patch.texture().width as f32 - texel_width_half,
+                            y as f32 / nine_patch.texture().height as f32 - texel_height_half,
                         ]
                     }
                 };
