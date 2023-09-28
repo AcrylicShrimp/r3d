@@ -1,0 +1,15 @@
+[package]
+name = "asset-loader"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+asset = { path = "../r3d-asset" }
+asset-pipeline = { path = "../r3d-asset-pipeline" }
+
+serde = { version = "1", features = ["derive"] }
+thiserror = { version = "1" }
+toml = { version = "0.8" }
+uuid = { version = "1", features = ["v4", "serde"] }

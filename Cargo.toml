@@ -11,6 +11,8 @@ categories = ["game-development", "game-engines"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+asset = { path = "./r3d-asset" }
+asset-loader = { path = "./r3d-asset-loader" }
 codegen = { path = "./r3d-codegen" }
 
 bitvec = { version = "1" }
@@ -33,6 +35,9 @@ zerocopy = { version = "0.6" }
 
 [workspace]
 members = [
+  "./r3d-asset",
+  "./r3d-asset-loader",
+  "./r3d-asset-pipeline",
   "./r3d-codegen",
   "./r3d-editor",
 ]
