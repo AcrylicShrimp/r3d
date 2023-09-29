@@ -61,8 +61,8 @@ impl From<FontDueMetrics> for GlyphMetrics {
 /// It also provides glyph metrics and rasterization.
 pub trait FontAsset: Asset {
     fn sdf_font_size(&self) -> f32;
-    fn sdf_inset(&self) -> usize;
-    fn sdf_radius(&self) -> usize;
+    fn sdf_inset(&self) -> u32;
+    fn sdf_radius(&self) -> u32;
     fn sdf_cutoff(&self) -> f32;
     fn glyph_id(&self, character: char) -> Option<GlyphId>;
     fn glyph_metrics(&self, glyph_index: NonZeroU16) -> GlyphMetrics;
@@ -73,8 +73,8 @@ pub trait FontAsset: Asset {
 pub struct FontSource {
     pub font_file: Vec<u8>,
     pub sdf_font_size: f32,
-    pub sdf_inset: usize,
-    pub sdf_radius: usize,
+    pub sdf_inset: u32,
+    pub sdf_radius: u32,
     pub sdf_cutoff: f32,
 }
 
@@ -106,8 +106,8 @@ struct Font {
     id: Uuid,
     font: FontDueFont,
     sdf_font_size: f32,
-    sdf_inset: usize,
-    sdf_radius: usize,
+    sdf_inset: u32,
+    sdf_radius: u32,
     sdf_cutoff: f32,
 }
 
@@ -126,11 +126,11 @@ impl FontAsset for Font {
         self.sdf_font_size
     }
 
-    fn sdf_inset(&self) -> usize {
+    fn sdf_inset(&self) -> u32 {
         self.sdf_inset
     }
 
-    fn sdf_radius(&self) -> usize {
+    fn sdf_radius(&self) -> u32 {
         self.sdf_radius
     }
 

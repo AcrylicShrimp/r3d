@@ -10,8 +10,8 @@ pub struct FontMetadata {
 #[derive(Serialize, Deserialize)]
 pub struct FontTable {
     pub sdf_font_size: f32,
-    pub sdf_inset: usize,
-    pub sdf_radius: usize,
+    pub sdf_inset: u32,
+    pub sdf_radius: u32,
     pub sdf_cutoff: f32,
 }
 
