@@ -68,9 +68,6 @@ pub fn process_asset(
         AssetType::Shader => {
             todo!()
         }
-        AssetType::Sprite => {
-            todo!()
-        }
         AssetType::Texture => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;

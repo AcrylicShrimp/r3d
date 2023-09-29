@@ -4,6 +4,12 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TextureFormat {
+    RGB8,
+    RGBA8,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextureFilterMode {
     Point,
     Bilinear,
@@ -17,9 +23,33 @@ pub enum TextureAddressMode {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TextureFormat {
-    RGB8,
-    RGBA8,
+pub struct SpriteTexelRange {
+    pub min: u16,
+    pub max: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NinePatchTexelRange {
+    pub min: u16,
+    pub mid_min: u16,
+    pub mid_max: u16,
+    pub max: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Sprite {
+    pub name: String,
+    pub filter_mode: TextureFilterMode,
+    pub address_mode: (TextureAddressMode, TextureAddressMode),
+    pub texel_mapping: (SpriteTexelRange, SpriteTexelRange),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NinePatch {
+    pub name: String,
+    pub filter_mode: TextureFilterMode,
+    pub address_mode: (TextureAddressMode, TextureAddressMode),
+    pub texel_mapping: (NinePatchTexelRange, NinePatchTexelRange),
 }
 
 /// Represents a texture asset. It supplies texture parameters too.
@@ -30,6 +60,8 @@ pub trait TextureAsset: Asset {
     fn filter_mode(&self) -> TextureFilterMode;
     fn address_mode(&self) -> (TextureAddressMode, TextureAddressMode);
     fn texels(&self) -> &[u8];
+    fn sprites(&self) -> &[Sprite];
+    fn nine_patches(&self) -> &[NinePatch];
 }
 
 #[derive(Serialize, Deserialize)]
@@ -40,6 +72,8 @@ pub struct TextureSource {
     pub filter_mode: TextureFilterMode,
     pub address_mode: (TextureAddressMode, TextureAddressMode),
     pub texels: Vec<u8>,
+    pub sprites: Vec<Sprite>,
+    pub nine_patches: Vec<NinePatch>,
 }
 
 impl AssetSource for TextureSource {
@@ -62,6 +96,8 @@ impl AssetSource for TextureSource {
             filter_mode: self.filter_mode,
             address_mode: self.address_mode,
             texels: self.texels,
+            sprites: self.sprites,
+            nine_patches: self.nine_patches,
         }))
     }
 }
@@ -74,6 +110,8 @@ struct Texture {
     filter_mode: TextureFilterMode,
     address_mode: (TextureAddressMode, TextureAddressMode),
     texels: Vec<u8>,
+    sprites: Vec<Sprite>,
+    nine_patches: Vec<NinePatch>,
 }
 
 impl Asset for Texture {
@@ -109,5 +147,13 @@ impl TextureAsset for Texture {
 
     fn texels(&self) -> &[u8] {
         &self.texels
+    }
+
+    fn sprites(&self) -> &[Sprite] {
+        &self.sprites
+    }
+
+    fn nine_patches(&self) -> &[NinePatch] {
+        &self.nine_patches
     }
 }

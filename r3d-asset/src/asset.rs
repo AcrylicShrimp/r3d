@@ -1,4 +1,4 @@
-use crate::assets::{Font, Model, Shader, Sprite, Texture};
+use crate::assets::{Font, Model, Shader, Texture};
 use std::{fmt::Display, sync::Arc};
 use uuid::Uuid;
 
@@ -7,7 +7,6 @@ pub enum AssetType {
     Font,
     Model,
     Shader,
-    Sprite,
     Texture,
 }
 
@@ -17,7 +16,6 @@ impl Display for AssetType {
             AssetType::Font => write!(f, "font"),
             AssetType::Model => write!(f, "model"),
             AssetType::Shader => write!(f, "shader"),
-            AssetType::Sprite => write!(f, "sprite"),
             AssetType::Texture => write!(f, "texture"),
         }
     }
@@ -28,7 +26,6 @@ pub enum TypedAsset {
     Font(Font),
     Model(Model),
     Shader(Shader),
-    Sprite(Sprite),
     Texture(Texture),
 }
 
@@ -38,7 +35,6 @@ impl TypedAsset {
             TypedAsset::Font(_) => AssetType::Font,
             TypedAsset::Model(_) => AssetType::Model,
             TypedAsset::Shader(_) => AssetType::Shader,
-            TypedAsset::Sprite(_) => AssetType::Sprite,
             TypedAsset::Texture(_) => AssetType::Texture,
         }
     }
@@ -53,10 +49,6 @@ impl TypedAsset {
 
     pub fn is_shader(&self) -> bool {
         matches!(self, TypedAsset::Shader(_))
-    }
-
-    pub fn is_sprite(&self) -> bool {
-        matches!(self, TypedAsset::Sprite(_))
     }
 
     pub fn is_texture(&self) -> bool {
@@ -80,13 +72,6 @@ impl TypedAsset {
     pub fn as_shader(&self) -> Option<&Shader> {
         match self {
             TypedAsset::Shader(shader) => Some(shader),
-            _ => None,
-        }
-    }
-
-    pub fn as_sprite(&self) -> Option<&Sprite> {
-        match self {
-            TypedAsset::Sprite(sprite) => Some(sprite),
             _ => None,
         }
     }

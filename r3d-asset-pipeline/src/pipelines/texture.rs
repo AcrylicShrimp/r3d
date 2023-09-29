@@ -1,12 +1,17 @@
 use crate::{AssetPipeline, Metadata};
-use asset::assets::{TextureAddressMode, TextureFilterMode, TextureFormat, TextureSource};
+use asset::assets::{
+    NinePatch, NinePatchTexelRange, Sprite, SpriteTexelRange, TextureAddressMode,
+    TextureFilterMode, TextureFormat, TextureSource,
+};
 use image::io::Reader as ImageReader;
 use serde::{Deserialize, Serialize};
-use std::io::Cursor;
+use std::{collections::HashMap, io::Cursor};
 
 #[derive(Serialize, Deserialize)]
 pub struct TextureMetadata {
     pub texture: TextureTable,
+    pub sprite: HashMap<String, SpriteTable>,
+    pub nine_patch: HashMap<String, NinePatchTable>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -50,6 +55,32 @@ pub struct TextureTable {
     pub filter_mode: TextureTableFilterMode,
     pub address_mode_u: TextureTableAddressMode,
     pub address_mode_v: TextureTableAddressMode,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SpriteTable {
+    pub x_min: u16,
+    pub x_max: u16,
+    pub y_min: u16,
+    pub y_max: u16,
+    pub filter_mode: Option<TextureTableFilterMode>,
+    pub address_mode_u: Option<TextureTableAddressMode>,
+    pub address_mode_v: Option<TextureTableAddressMode>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NinePatchTable {
+    pub x_min: u16,
+    pub x_mid_min: u16,
+    pub x_mid_max: u16,
+    pub x_max: u16,
+    pub y_min: u16,
+    pub y_mid_min: u16,
+    pub y_mid_max: u16,
+    pub y_max: u16,
+    pub filter_mode: Option<TextureTableFilterMode>,
+    pub address_mode_u: Option<TextureTableAddressMode>,
+    pub address_mode_v: Option<TextureTableAddressMode>,
 }
 
 impl AssetPipeline for TextureSource {
@@ -106,6 +137,71 @@ impl AssetPipeline for TextureSource {
             metadata.extra.texture.address_mode_u.into(),
             metadata.extra.texture.address_mode_v.into(),
         );
+
+        let sprites = Vec::from_iter(metadata.extra.sprite.iter().map(|(name, sprite)| {
+            Sprite {
+                name: name.clone(),
+                filter_mode: sprite
+                    .filter_mode
+                    .map(|mode| mode.into())
+                    .unwrap_or(filter_mode),
+                address_mode: (
+                    sprite
+                        .address_mode_u
+                        .map(|mode| mode.into())
+                        .unwrap_or(address_mode.0),
+                    sprite
+                        .address_mode_v
+                        .map(|mode| mode.into())
+                        .unwrap_or(address_mode.1),
+                ),
+                texel_mapping: (
+                    SpriteTexelRange {
+                        min: sprite.x_min,
+                        max: sprite.x_max,
+                    },
+                    SpriteTexelRange {
+                        min: sprite.y_min,
+                        max: sprite.y_max,
+                    },
+                ),
+            }
+        }));
+        let nine_patches =
+            Vec::from_iter(metadata.extra.nine_patch.iter().map(|(name, nine_patch)| {
+                NinePatch {
+                    name: name.clone(),
+                    filter_mode: nine_patch
+                        .filter_mode
+                        .map(|mode| mode.into())
+                        .unwrap_or(filter_mode),
+                    address_mode: (
+                        nine_patch
+                            .address_mode_u
+                            .map(|mode| mode.into())
+                            .unwrap_or(address_mode.0),
+                        nine_patch
+                            .address_mode_v
+                            .map(|mode| mode.into())
+                            .unwrap_or(address_mode.1),
+                    ),
+                    texel_mapping: (
+                        NinePatchTexelRange {
+                            min: nine_patch.x_min,
+                            mid_min: nine_patch.x_mid_min,
+                            mid_max: nine_patch.x_mid_max,
+                            max: nine_patch.x_max,
+                        },
+                        NinePatchTexelRange {
+                            min: nine_patch.y_min,
+                            mid_min: nine_patch.y_mid_min,
+                            mid_max: nine_patch.y_mid_max,
+                            max: nine_patch.y_max,
+                        },
+                    ),
+                }
+            }));
+
         Ok(Self {
             width,
             height,
@@ -113,6 +209,8 @@ impl AssetPipeline for TextureSource {
             filter_mode,
             address_mode,
             texels,
+            sprites,
+            nine_patches,
         })
     }
 }
