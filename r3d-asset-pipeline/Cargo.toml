@@ -9,7 +9,9 @@ edition = "2021"
 asset = { path = "../r3d-asset" }
 
 anyhow = { version = "1" }
+byteorder = { version = "1" }
 image = { version = "0.24" }
+russimp = { version = "2", features = ["prebuilt", "static-link"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = { version = "1" }
 toml = { version = "0.8" }

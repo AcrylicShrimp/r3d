@@ -1,5 +1,5 @@
 use asset::{
-    assets::{FontSource, TextureSource},
+    assets::{FontSource, ModelSource, TextureSource},
     AssetType,
 };
 use std::path::{Path, PathBuf};
@@ -14,12 +14,19 @@ pub use pipeline::*;
 
 pub enum TypedAssetSource {
     Font(FontSource),
+    Model(ModelSource),
     Texture(TextureSource),
 }
 
 impl From<FontSource> for TypedAssetSource {
     fn from(value: FontSource) -> Self {
         Self::Font(value)
+    }
+}
+
+impl From<ModelSource> for TypedAssetSource {
+    fn from(value: ModelSource) -> Self {
+        Self::Model(value)
     }
 }
 
@@ -52,10 +59,10 @@ pub fn process_asset(
             let asset = FontSource::process(file_content, &metadata)?;
             Ok(asset.into())
         }
-        AssetType::Mesh => {
+        AssetType::Model => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = TextureSource::process(file_content, &metadata)?;
+            let asset = ModelSource::process(file_content, &metadata)?;
             Ok(asset.into())
         }
         AssetType::Shader => {
@@ -65,7 +72,10 @@ pub fn process_asset(
             todo!()
         }
         AssetType::Texture => {
-            todo!()
+            let metadata = Metadata::from_toml(metadata_content)?;
+            let file_content = std::fs::read(path)?;
+            let asset = TextureSource::process(file_content, &metadata)?;
+            Ok(asset.into())
         }
     }
 }

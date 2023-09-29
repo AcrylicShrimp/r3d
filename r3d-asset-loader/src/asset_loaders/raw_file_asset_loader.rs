@@ -16,6 +16,7 @@ impl AssetLoader for RawFileAssetLoader {
         // Resolve dependencies. NOTE: It can be recursive.
         let deps = match &processed {
             TypedAssetSource::Font(source) => source.dependencies(),
+            TypedAssetSource::Model(source) => source.dependencies(),
             TypedAssetSource::Texture(source) => source.dependencies(),
         };
         let deps = deps
@@ -25,6 +26,7 @@ impl AssetLoader for RawFileAssetLoader {
 
         Ok(match processed {
             TypedAssetSource::Font(source) => TypedAsset::Font(source.load(id, &deps)?),
+            TypedAssetSource::Model(source) => TypedAsset::Model(source.load(id, &deps)?),
             TypedAssetSource::Texture(source) => TypedAsset::Texture(source.load(id, &deps)?),
         })
     }

@@ -1,11 +1,11 @@
-use crate::assets::{Font, Mesh, Shader, Sprite, Texture};
+use crate::assets::{Font, Model, Shader, Sprite, Texture};
 use std::{fmt::Display, sync::Arc};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssetType {
     Font,
-    Mesh,
+    Model,
     Shader,
     Sprite,
     Texture,
@@ -15,7 +15,7 @@ impl Display for AssetType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AssetType::Font => write!(f, "font"),
-            AssetType::Mesh => write!(f, "mesh"),
+            AssetType::Model => write!(f, "model"),
             AssetType::Shader => write!(f, "shader"),
             AssetType::Sprite => write!(f, "sprite"),
             AssetType::Texture => write!(f, "texture"),
@@ -26,7 +26,7 @@ impl Display for AssetType {
 #[derive(Clone)]
 pub enum TypedAsset {
     Font(Font),
-    Mesh(Mesh),
+    Model(Model),
     Shader(Shader),
     Sprite(Sprite),
     Texture(Texture),
@@ -36,7 +36,7 @@ impl TypedAsset {
     pub fn ty(&self) -> AssetType {
         match self {
             TypedAsset::Font(_) => AssetType::Font,
-            TypedAsset::Mesh(_) => AssetType::Mesh,
+            TypedAsset::Model(_) => AssetType::Model,
             TypedAsset::Shader(_) => AssetType::Shader,
             TypedAsset::Sprite(_) => AssetType::Sprite,
             TypedAsset::Texture(_) => AssetType::Texture,
@@ -47,8 +47,8 @@ impl TypedAsset {
         matches!(self, TypedAsset::Font(_))
     }
 
-    pub fn is_mesh(&self) -> bool {
-        matches!(self, TypedAsset::Mesh(_))
+    pub fn is_model(&self) -> bool {
+        matches!(self, TypedAsset::Model(_))
     }
 
     pub fn is_shader(&self) -> bool {
@@ -70,9 +70,9 @@ impl TypedAsset {
         }
     }
 
-    pub fn as_mesh(&self) -> Option<&Mesh> {
+    pub fn as_model(&self) -> Option<&Model> {
         match self {
-            TypedAsset::Mesh(mesh) => Some(mesh),
+            TypedAsset::Model(model) => Some(model),
             _ => None,
         }
     }

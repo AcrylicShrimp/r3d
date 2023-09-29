@@ -164,7 +164,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "asset",
+ "byteorder",
  "image",
+ "russimp",
  "serde",
  "thiserror",
  "toml",
