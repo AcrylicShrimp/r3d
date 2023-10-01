@@ -1,5 +1,5 @@
 use asset::{
-    assets::{FontSource, ModelSource, TextureSource},
+    assets::{FontSource, ModelSource, ShaderSource, TextureSource},
     AssetType,
 };
 use std::path::{Path, PathBuf};
@@ -15,6 +15,7 @@ pub use pipeline::*;
 pub enum TypedAssetSource {
     Font(FontSource),
     Model(ModelSource),
+    Shader(ShaderSource),
     Texture(TextureSource),
 }
 
@@ -27,6 +28,12 @@ impl From<FontSource> for TypedAssetSource {
 impl From<ModelSource> for TypedAssetSource {
     fn from(value: ModelSource) -> Self {
         Self::Model(value)
+    }
+}
+
+impl From<ShaderSource> for TypedAssetSource {
+    fn from(value: ShaderSource) -> Self {
+        Self::Shader(value)
     }
 }
 
@@ -66,7 +73,10 @@ pub fn process_asset(
             Ok(asset.into())
         }
         AssetType::Shader => {
-            todo!()
+            let metadata = Metadata::from_toml(metadata_content)?;
+            let file_content = std::fs::read(path)?;
+            let asset = ShaderSource::process(file_content, &metadata)?;
+            Ok(asset.into())
         }
         AssetType::Texture => {
             let metadata = Metadata::from_toml(metadata_content)?;
@@ -98,9 +108,11 @@ pub fn deduce_asset_type_from_path(
 
     match extension.to_lowercase().as_str() {
         "ttf" | "otf" => Ok(AssetType::Font),
+        "gltf" | "glb" | "fbx" | "obj" | "3ds" | "blender" => Ok(AssetType::Model),
         "png" | "jpg" | "jpeg" | "gif" | "tif" | "tiff" | "tga" | "bmp" | "webp" => {
             Ok(AssetType::Texture)
         }
+        "wgsl" => Ok(AssetType::Shader),
         _ => Err(AssetTypeDeduceError::UnsupportedExtension(
             path.to_path_buf(),
         )),

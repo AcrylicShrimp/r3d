@@ -16,8 +16,8 @@ pub struct ShaderReflection {
     pub vertex_entry_point: String,
     pub fragment_entry_point: String,
     pub globals: Vec<ShaderGlobalItem>,
-    pub instance_input: ShaderInput,
     pub vertex_input: ShaderInput,
+    pub instance_input: ShaderInput,
     pub outputs: Vec<ShaderOutputItem>,
 }
 
@@ -74,13 +74,13 @@ pub struct ShaderOutputItem {
 /// To get shader module, you have to compile it manually.
 pub trait ShaderAsset: Asset {
     fn source(&self) -> &str;
-    fn reflected(&self) -> &ShaderReflection;
+    fn reflection(&self) -> &ShaderReflection;
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ShaderSource {
     pub source: String,
-    pub reflected: ShaderReflection,
+    pub reflection: ShaderReflection,
 }
 
 impl AssetSource for ShaderSource {
@@ -98,7 +98,7 @@ impl AssetSource for ShaderSource {
         Ok(Arc::new(Shader {
             id,
             source: self.source,
-            reflected: self.reflected,
+            reflection: self.reflection,
         }))
     }
 }
@@ -106,7 +106,7 @@ impl AssetSource for ShaderSource {
 struct Shader {
     id: Uuid,
     source: String,
-    reflected: ShaderReflection,
+    reflection: ShaderReflection,
 }
 
 impl Asset for Shader {
@@ -124,7 +124,7 @@ impl ShaderAsset for Shader {
         &self.source
     }
 
-    fn reflected(&self) -> &ShaderReflection {
-        &self.reflected
+    fn reflection(&self) -> &ShaderReflection {
+        &self.reflection
     }
 }

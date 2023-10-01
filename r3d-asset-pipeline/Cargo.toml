@@ -11,8 +11,10 @@ asset = { path = "../r3d-asset" }
 anyhow = { version = "1" }
 byteorder = { version = "1" }
 image = { version = "0.24" }
+naga = { version = "0.13", features = ["wgsl-in"] }
 russimp = { version = "2", features = ["prebuilt", "static-link"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = { version = "1" }
 toml = { version = "0.8" }
 uuid = { version = "1", features = ["v4", "serde"] }
+wgpu-types = { version = "0.17", features = ["replay", "serde", "trace"] }

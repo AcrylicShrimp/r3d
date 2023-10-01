@@ -166,11 +166,13 @@ dependencies = [
  "asset",
  "byteorder",
  "image",
+ "naga",
  "russimp",
  "serde",
  "thiserror",
  "toml",
  "uuid",
+ "wgpu-types",
 ]
 
 [[package]]
