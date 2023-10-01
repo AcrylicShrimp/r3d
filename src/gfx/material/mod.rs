@@ -27,7 +27,7 @@ pub struct Material {
     pub semantic_inputs: HashMap<SemanticShaderInputKey, SemanticInputData>,
     pub bind_properties: HashMap<BindingPropKey, BindGroupIndex>,
     pub bind_group_holders: Vec<BindGroupHolder>,
-    pub per_instance_properties: HashMap<String, PerInstanceProperty>,
+    pub instance_properties: HashMap<String, InstanceProperty>,
 }
 
 impl Material {
@@ -134,7 +134,7 @@ impl Material {
                 .map(|input| {
                     (
                         input.name.clone(),
-                        PerInstanceProperty {
+                        InstanceProperty {
                             format: input.attribute.format,
                             offset: input.attribute.offset,
                             value: None,
@@ -161,7 +161,7 @@ impl Material {
             semantic_inputs,
             bind_properties,
             bind_group_holders,
-            per_instance_properties,
+            instance_properties: per_instance_properties,
         }
     }
 
@@ -193,7 +193,7 @@ impl Material {
         name: impl AsRef<str>,
         value: impl Into<PerInstancePropertyValue>,
     ) -> bool {
-        let property = if let Some(property) = self.per_instance_properties.get_mut(name.as_ref()) {
+        let property = if let Some(property) = self.instance_properties.get_mut(name.as_ref()) {
             property
         } else {
             return false;
@@ -393,7 +393,7 @@ impl<'a> BindGroupEntryResourceBindingResourceBuilder<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct PerInstanceProperty {
+pub struct InstanceProperty {
     pub format: VertexFormat,
     pub offset: BufferAddress,
     pub value: Option<PerInstancePropertyValue>,

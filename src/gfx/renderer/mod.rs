@@ -178,7 +178,7 @@ pub fn build_rendering_command<'r>(
             }
         }
 
-        for property in material.per_instance_properties.values() {
+        for property in material.instance_properties.values() {
             if let Some(value) = &property.value {
                 per_instance_buffer
                     .slice(property.offset, value.to_vertex_format().size())
