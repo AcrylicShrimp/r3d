@@ -1,4 +1,4 @@
-use crate::AssetPipeline;
+use crate::{AssetPipeline, PipelineGfxBridge};
 use anyhow::Context;
 use asset::assets::{
     ShaderGlobalItem, ShaderGlobalItemKind, ShaderInput, ShaderInputField, ShaderOutputItem,
@@ -12,7 +12,7 @@ use naga::{
 use serde::{Deserialize, Serialize};
 use std::num::{NonZeroU32, NonZeroU64};
 use thiserror::Error;
-use wgpu_types::{
+use wgpu::{
     BufferAddress, SamplerBindingType, TextureSampleType, TextureViewDimension, VertexAttribute,
     VertexFormat, VertexStepMode,
 };
@@ -36,13 +36,14 @@ impl AssetPipeline for ShaderSource {
     fn process(
         file_content: Vec<u8>,
         _metadata: &crate::Metadata<Self::Metadata>,
+        gfx_bridge: &dyn PipelineGfxBridge,
     ) -> anyhow::Result<Self> {
         let source = std::str::from_utf8(&file_content)
             .with_context(|| "failed to decode shader source into utf8 string")?;
         let module = naga::front::wgsl::parse_str(&source)
             .with_context(|| "failed to parse wgsl shader source")?;
 
-        let globals = reflect_globals(&module);
+        let globals = reflect_globals(gfx_bridge, &module);
 
         let mut vertex_entry_point = None;
         let mut fragment_entry_point = None;
@@ -55,7 +56,9 @@ impl AssetPipeline for ShaderSource {
                 ShaderStage::Vertex => {
                     vertex_entry_point = Some(entry_point.name.clone());
 
-                    for input in reflect_vertex_entry_point(&module, &entry_point.function) {
+                    for input in
+                        reflect_vertex_entry_point(gfx_bridge, &module, &entry_point.function)
+                    {
                         match input.step_mode {
                             VertexStepMode::Vertex => {
                                 vertex_input = Some(input);
@@ -70,7 +73,7 @@ impl AssetPipeline for ShaderSource {
                     fragment_entry_point = Some(entry_point.name.clone());
 
                     if let Some(fragment_outputs) =
-                        reflect_fragment_entry_point(&module, &entry_point.function)
+                        reflect_fragment_entry_point(gfx_bridge, &module, &entry_point.function)
                     {
                         outputs = Some(fragment_outputs);
                     }
@@ -103,15 +106,19 @@ impl AssetPipeline for ShaderSource {
     }
 }
 
-fn reflect_globals(module: &Module) -> Vec<ShaderGlobalItem> {
+fn reflect_globals(gfx_bridge: &dyn PipelineGfxBridge, module: &Module) -> Vec<ShaderGlobalItem> {
     module
         .global_variables
         .iter()
-        .filter_map(|(_, item)| reflect_global_item(module, item))
+        .filter_map(|(_, item)| reflect_global_item(gfx_bridge, module, item))
         .collect()
 }
 
-fn reflect_global_item(module: &Module, item: &GlobalVariable) -> Option<ShaderGlobalItem> {
+fn reflect_global_item(
+    gfx_bridge: &dyn PipelineGfxBridge,
+    module: &Module,
+    item: &GlobalVariable,
+) -> Option<ShaderGlobalItem> {
     let name = item.name.as_ref()?;
     let ResourceBinding { group, binding } = item.binding.clone()?;
     let kind = match item.space {
@@ -124,6 +131,7 @@ fn reflect_global_item(module: &Module, item: &GlobalVariable) -> Option<ShaderG
     };
 
     Some(ShaderGlobalItem {
+        sematic_key: gfx_bridge.get_semantic_binding_key(module, name),
         name: name.clone(),
         group,
         binding,
@@ -131,15 +139,20 @@ fn reflect_global_item(module: &Module, item: &GlobalVariable) -> Option<ShaderG
     })
 }
 
-fn reflect_vertex_entry_point(module: &Module, function: &Function) -> Vec<ShaderInput> {
+fn reflect_vertex_entry_point(
+    gfx_bridge: &dyn PipelineGfxBridge,
+    module: &Module,
+    function: &Function,
+) -> Vec<ShaderInput> {
     function
         .arguments
         .iter()
-        .filter_map(|argument| reflect_vertex_entry_point_argument(module, argument))
+        .filter_map(|argument| reflect_vertex_entry_point_argument(gfx_bridge, module, argument))
         .collect()
 }
 
 fn reflect_vertex_entry_point_argument(
+    gfx_bridge: &dyn PipelineGfxBridge,
     module: &Module,
     argument: &FunctionArgument,
 ) -> Option<ShaderInput> {
@@ -155,10 +168,13 @@ fn reflect_vertex_entry_point_argument(
     } else {
         return None;
     };
-    Some(reflect_shader_input(module, step_mode, span, members))
+    Some(reflect_shader_input(
+        gfx_bridge, module, step_mode, span, members,
+    ))
 }
 
 fn reflect_shader_input(
+    gfx_bridge: &dyn PipelineGfxBridge,
     module: &Module,
     step_mode: VertexStepMode,
     stride: u32,
@@ -166,7 +182,7 @@ fn reflect_shader_input(
 ) -> ShaderInput {
     let fields = members
         .iter()
-        .filter_map(|member| reflect_shader_input_field(module, member))
+        .filter_map(|member| reflect_shader_input_field(gfx_bridge, module, step_mode, member))
         .collect();
     ShaderInput {
         step_mode,
@@ -175,7 +191,12 @@ fn reflect_shader_input(
     }
 }
 
-fn reflect_shader_input_field(module: &Module, member: &StructMember) -> Option<ShaderInputField> {
+fn reflect_shader_input_field(
+    gfx_bridge: &dyn PipelineGfxBridge,
+    module: &Module,
+    step_mode: VertexStepMode,
+    member: &StructMember,
+) -> Option<ShaderInputField> {
     let name = member.name.as_ref()?;
     let location = match member.binding.as_ref()? {
         Binding::BuiltIn(_) => return None,
@@ -183,6 +204,7 @@ fn reflect_shader_input_field(module: &Module, member: &StructMember) -> Option<
     };
     let format = shader_ty_to_vertex_format(&module.types[member.ty])?;
     Some(ShaderInputField {
+        semantic_key: gfx_bridge.get_semantic_input_key(step_mode, format, name),
         name: name.clone(),
         attribute: VertexAttribute {
             format,
@@ -193,6 +215,7 @@ fn reflect_shader_input_field(module: &Module, member: &StructMember) -> Option<
 }
 
 fn reflect_fragment_entry_point(
+    gfx_bridge: &dyn PipelineGfxBridge,
     module: &Module,
     function: &Function,
 ) -> Option<Vec<ShaderOutputItem>> {
@@ -214,18 +237,22 @@ fn reflect_fragment_entry_point(
     Some(
         members
             .iter()
-            .filter_map(|member| reflect_shader_output_item(member))
+            .filter_map(|member| reflect_shader_output_item(gfx_bridge, member))
             .collect(),
     )
 }
 
-fn reflect_shader_output_item(member: &StructMember) -> Option<ShaderOutputItem> {
+fn reflect_shader_output_item(
+    gfx_bridge: &dyn PipelineGfxBridge,
+    member: &StructMember,
+) -> Option<ShaderOutputItem> {
     let name = member.name.as_ref()?;
     let location = match member.binding.as_ref()? {
         Binding::BuiltIn(_) => return None,
         Binding::Location { location, .. } => *location,
     };
     Some(ShaderOutputItem {
+        semantic_key: gfx_bridge.get_semantic_output_key(location, name),
         name: name.clone(),
         location,
     })

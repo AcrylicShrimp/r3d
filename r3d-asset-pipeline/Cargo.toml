@@ -17,4 +17,4 @@ serde = { version = "1", features = ["derive"] }
 thiserror = { version = "1" }
 toml = { version = "0.8" }
 uuid = { version = "1", features = ["v4", "serde"] }
-wgpu-types = { version = "0.17", features = ["replay", "serde", "trace"] }
+wgpu = { version = "0.17", features = ["replay", "serde", "trace"] }

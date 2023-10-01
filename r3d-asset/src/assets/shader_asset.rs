@@ -10,6 +10,15 @@ use wgpu_types::{
     VertexStepMode,
 };
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SemanticShaderBindingKey(NonZeroU32);
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SemanticShaderInputKey(NonZeroU32);
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SemanticShaderOutputKey(NonZeroU32);
+
 /// A fully reflected shader.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ShaderReflection {
@@ -24,6 +33,7 @@ pub struct ShaderReflection {
 /// Represents a shader global item, a.k.a. uniform.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ShaderGlobalItem {
+    pub sematic_key: Option<SemanticShaderBindingKey>,
     pub name: String,
     pub group: u32,
     pub binding: u32,
@@ -59,6 +69,7 @@ pub struct ShaderInput {
 /// Each field of a shader input struct.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ShaderInputField {
+    pub semantic_key: Option<SemanticShaderInputKey>,
     pub name: String,
     pub attribute: VertexAttribute,
 }
@@ -66,6 +77,7 @@ pub struct ShaderInputField {
 /// Each output item of a shader, e.g. a color output.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ShaderOutputItem {
+    pub semantic_key: Option<SemanticShaderOutputKey>,
     pub name: String,
     pub location: u32,
 }

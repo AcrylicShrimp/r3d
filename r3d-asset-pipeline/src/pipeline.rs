@@ -1,4 +1,4 @@
-use crate::Metadata;
+use crate::{Metadata, PipelineGfxBridge};
 use asset::AssetSource;
 use serde::{Deserialize, Serialize};
 
@@ -10,5 +10,9 @@ where
     type Metadata: for<'de> Deserialize<'de>;
 
     /// Process the file content and metadata into a new asset source.
-    fn process(file_content: Vec<u8>, metadata: &Metadata<Self::Metadata>) -> anyhow::Result<Self>;
+    fn process(
+        file_content: Vec<u8>,
+        metadata: &Metadata<Self::Metadata>,
+        gfx_bridge: &dyn PipelineGfxBridge,
+    ) -> anyhow::Result<Self>;
 }

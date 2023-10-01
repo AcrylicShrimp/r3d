@@ -1,17 +1,32 @@
 use crate::{AssetDatabase, AssetLoadError, AssetLoader};
 use asset::{AssetSource, TypedAsset};
-use asset_pipeline::{process_asset, TypedAssetSource};
+use asset_pipeline::{process_asset, PipelineGfxBridge, TypedAssetSource};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-pub struct RawFileAssetLoader;
+pub struct RawFileAssetLoader {
+    pipeline_gfx_bridge: Box<dyn PipelineGfxBridge>,
+}
+
+impl RawFileAssetLoader {
+    pub fn new(pipeline_gfx_bridge: impl PipelineGfxBridge + 'static) -> Self {
+        Self {
+            pipeline_gfx_bridge: Box::new(pipeline_gfx_bridge),
+        }
+    }
+}
 
 impl AssetLoader for RawFileAssetLoader {
     fn load_asset(&self, id: Uuid, database: &AssetDatabase) -> Result<TypedAsset, AssetLoadError> {
         let data = database
             .find_asset_by_id(id)
             .ok_or_else(|| AssetLoadError::AssetNotFound(id))?;
-        let processed = process_asset(&data.path, data.asset_type, &data.metadata_content)?;
+        let processed = process_asset(
+            &data.path,
+            data.asset_type,
+            &data.metadata_content,
+            &*self.pipeline_gfx_bridge,
+        )?;
 
         // Resolve dependencies. NOTE: It can be recursive.
         let deps = match &processed {

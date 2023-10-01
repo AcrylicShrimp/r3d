@@ -7,10 +7,12 @@ use thiserror::Error;
 
 mod metadata;
 mod pipeline;
+mod pipeline_gfx_bridge;
 pub mod pipelines;
 
 pub use metadata::*;
 pub use pipeline::*;
+pub use pipeline_gfx_bridge::*;
 
 pub enum TypedAssetSource {
     Font(FontSource),
@@ -57,31 +59,32 @@ pub fn process_asset(
     path: impl AsRef<Path>,
     asset_type: AssetType,
     metadata_content: impl AsRef<str>,
+    gfx_bridge: &dyn PipelineGfxBridge,
 ) -> Result<TypedAssetSource, AssetProcessError> {
     let path = path.as_ref();
     match asset_type {
         AssetType::Font => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = FontSource::process(file_content, &metadata)?;
+            let asset = FontSource::process(file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Model => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = ModelSource::process(file_content, &metadata)?;
+            let asset = ModelSource::process(file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Shader => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = ShaderSource::process(file_content, &metadata)?;
+            let asset = ShaderSource::process(file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Texture => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = TextureSource::process(file_content, &metadata)?;
+            let asset = TextureSource::process(file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
     }

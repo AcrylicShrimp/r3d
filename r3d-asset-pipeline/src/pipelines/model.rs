@@ -1,4 +1,4 @@
-use crate::{AssetPipeline, Metadata};
+use crate::{AssetPipeline, Metadata, PipelineGfxBridge};
 use anyhow::{anyhow, Context};
 use asset::assets::{
     Mesh, MeshAABB, ModelSource, Node, NodeTransform, VertexAttribute, VertexAttributeKind,
@@ -27,6 +27,7 @@ impl AssetPipeline for ModelSource {
     fn process(
         file_content: Vec<u8>,
         _metadata: &Metadata<Self::Metadata>,
+        _gfx_bridge: &dyn PipelineGfxBridge,
     ) -> anyhow::Result<Self> {
         let scene = Scene::from_buffer(
             &file_content,

@@ -1,4 +1,4 @@
-use crate::{AssetPipeline, Metadata};
+use crate::{AssetPipeline, Metadata, PipelineGfxBridge};
 use asset::assets::FontSource;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,11 @@ pub struct FontTable {
 impl AssetPipeline for FontSource {
     type Metadata = FontMetadata;
 
-    fn process(file_content: Vec<u8>, metadata: &Metadata<Self::Metadata>) -> anyhow::Result<Self> {
+    fn process(
+        file_content: Vec<u8>,
+        metadata: &Metadata<Self::Metadata>,
+        _gfx_bridge: &dyn PipelineGfxBridge,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             font_file: file_content,
             sdf_font_size: metadata.extra.font.sdf_font_size,

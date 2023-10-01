@@ -1,4 +1,4 @@
-use crate::{AssetPipeline, Metadata};
+use crate::{AssetPipeline, Metadata, PipelineGfxBridge};
 use asset::assets::{
     NinePatch, NinePatchTexelRange, Sprite, SpriteTexelRange, TextureAddressMode,
     TextureFilterMode, TextureFormat, TextureSource,
@@ -86,7 +86,11 @@ pub struct NinePatchTable {
 impl AssetPipeline for TextureSource {
     type Metadata = TextureMetadata;
 
-    fn process(file_content: Vec<u8>, metadata: &Metadata<Self::Metadata>) -> anyhow::Result<Self> {
+    fn process(
+        file_content: Vec<u8>,
+        metadata: &Metadata<Self::Metadata>,
+        _gfx_bridge: &dyn PipelineGfxBridge,
+    ) -> anyhow::Result<Self> {
         let image = ImageReader::new(Cursor::new(file_content))
             .with_guessed_format()?
             .decode()?;
