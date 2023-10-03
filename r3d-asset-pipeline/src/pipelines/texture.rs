@@ -1,6 +1,6 @@
 use crate::{AssetPipeline, Metadata, PipelineGfxBridge};
 use asset::assets::{
-    NinePatch, NinePatchTexelRange, Sprite, SpriteTexelRange, TextureAddressMode,
+    NinePatchSource, NinePatchTexelRange, SpriteSource, SpriteTexelRange, TextureAddressMode,
     TextureFilterMode, TextureFormat, TextureSource,
 };
 use image::io::Reader as ImageReader;
@@ -143,7 +143,7 @@ impl AssetPipeline for TextureSource {
         );
 
         let sprites = Vec::from_iter(metadata.extra.sprite.iter().map(|(name, sprite)| {
-            Sprite {
+            SpriteSource {
                 name: name.clone(),
                 filter_mode: sprite
                     .filter_mode
@@ -173,7 +173,7 @@ impl AssetPipeline for TextureSource {
         }));
         let nine_patches =
             Vec::from_iter(metadata.extra.nine_patch.iter().map(|(name, nine_patch)| {
-                NinePatch {
+                NinePatchSource {
                     name: name.clone(),
                     filter_mode: nine_patch
                         .filter_mode

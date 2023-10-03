@@ -1,4 +1,4 @@
-use crate::assets::TextureFormat;
+use crate::assets::{TextureAddressMode, TextureFilterMode, TextureFormat};
 use wgpu::{BufferUsages, ShaderSource};
 
 /// A bridge interface to interact with the GPU.
@@ -17,4 +17,12 @@ pub trait GfxBridge {
         generate_mipmaps: bool,
         texels: &[u8],
     ) -> wgpu::Texture;
+    /// Creates a texture view from a texture.
+    fn create_texture_view(&self, texture: &wgpu::Texture) -> wgpu::TextureView;
+    /// Creates a sampler.
+    fn create_sampler(
+        &self,
+        filter_mode: TextureFilterMode,
+        address_mode: (TextureAddressMode, TextureAddressMode),
+    ) -> wgpu::Sampler;
 }
