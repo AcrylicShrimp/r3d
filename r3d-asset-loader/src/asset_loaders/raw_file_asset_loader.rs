@@ -1,16 +1,21 @@
 use crate::{AssetDatabase, AssetLoadError, AssetLoader};
-use asset::{AssetSource, TypedAsset};
+use asset::{AssetSource, GfxBridge, TypedAsset};
 use asset_pipeline::{process_asset, PipelineGfxBridge, TypedAssetSource};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 pub struct RawFileAssetLoader {
+    gfx_bridge: Box<dyn GfxBridge>,
     pipeline_gfx_bridge: Box<dyn PipelineGfxBridge>,
 }
 
 impl RawFileAssetLoader {
-    pub fn new(pipeline_gfx_bridge: impl PipelineGfxBridge + 'static) -> Self {
+    pub fn new(
+        gfx_bridge: impl GfxBridge + 'static,
+        pipeline_gfx_bridge: impl PipelineGfxBridge + 'static,
+    ) -> Self {
         Self {
+            gfx_bridge: Box::new(gfx_bridge),
             pipeline_gfx_bridge: Box::new(pipeline_gfx_bridge),
         }
     }
@@ -41,10 +46,18 @@ impl AssetLoader for RawFileAssetLoader {
             .collect::<Result<HashMap<_, _>, AssetLoadError>>()?;
 
         Ok(match processed {
-            TypedAssetSource::Font(source) => TypedAsset::Font(source.load(id, &deps)?),
-            TypedAssetSource::Model(source) => TypedAsset::Model(source.load(id, &deps)?),
-            TypedAssetSource::Shader(source) => TypedAsset::Shader(source.load(id, &deps)?),
-            TypedAssetSource::Texture(source) => TypedAsset::Texture(source.load(id, &deps)?),
+            TypedAssetSource::Font(source) => {
+                TypedAsset::Font(source.load(id, &deps, &*self.gfx_bridge)?)
+            }
+            TypedAssetSource::Model(source) => {
+                TypedAsset::Model(source.load(id, &deps, &*self.gfx_bridge)?)
+            }
+            TypedAssetSource::Shader(source) => {
+                TypedAsset::Shader(source.load(id, &deps, &*self.gfx_bridge)?)
+            }
+            TypedAssetSource::Texture(source) => {
+                TypedAsset::Texture(source.load(id, &deps, &*self.gfx_bridge)?)
+            }
         })
     }
 }

@@ -1,4 +1,4 @@
-use crate::{Asset, AssetDepsProvider, AssetType};
+use crate::{Asset, AssetDepsProvider, AssetType, GfxBridge};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
@@ -36,5 +36,6 @@ pub trait AssetSource: Serialize + for<'de> Deserialize<'de> {
         self,
         id: Uuid,
         deps_provider: &dyn AssetDepsProvider,
+        gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError>;
 }

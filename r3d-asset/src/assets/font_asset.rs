@@ -1,4 +1,4 @@
-use crate::{Asset, AssetDepsProvider, AssetLoadError, AssetSource, TypedAsset};
+use crate::{Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, TypedAsset};
 use fontdue::{Font as FontDueFont, Metrics as FontDueMetrics};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -89,6 +89,7 @@ impl AssetSource for FontSource {
         self,
         id: Uuid,
         _deps_provider: &dyn AssetDepsProvider,
+        _gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError> {
         Ok(Arc::new(Font {
             id,

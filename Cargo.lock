@@ -146,7 +146,7 @@ dependencies = [
  "serde",
  "thiserror",
  "uuid",
- "wgpu-types",
+ "wgpu",
 ]
 
 [[package]]
