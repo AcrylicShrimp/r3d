@@ -1,4 +1,6 @@
-use crate::{Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, TypedAsset};
+use crate::{
+    Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, GfxShaderModule, TypedAsset,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     borrow::Cow,
@@ -86,7 +88,7 @@ pub struct ShaderOutputItem {
 /// Represents a shader asset. It does not provide compiled shader module.
 /// To get shader module, you have to compile it manually.
 pub trait ShaderAsset: Asset {
-    fn handle(&self) -> &wgpu::ShaderModule;
+    fn handle(&self) -> &GfxShaderModule;
     fn reflection(&self) -> &ShaderReflection;
 }
 
@@ -120,7 +122,7 @@ impl AssetSource for ShaderSource {
 
 struct Shader {
     id: Uuid,
-    handle: wgpu::ShaderModule,
+    handle: GfxShaderModule,
     reflection: ShaderReflection,
 }
 
@@ -135,7 +137,7 @@ impl Asset for Shader {
 }
 
 impl ShaderAsset for Shader {
-    fn handle(&self) -> &wgpu::ShaderModule {
+    fn handle(&self) -> &GfxShaderModule {
         &self.handle
     }
 

@@ -1,4 +1,7 @@
-use crate::{Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, TypedAsset};
+use crate::{
+    Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, GfxSampler, GfxTexture,
+    GfxTextureView, TypedAsset,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -50,7 +53,7 @@ pub struct NinePatchTexelRange {
 #[derive(Debug)]
 pub struct Sprite {
     pub name: String,
-    pub sampler_handle: wgpu::Sampler,
+    pub sampler_handle: GfxSampler,
     pub filter_mode: TextureFilterMode,
     pub address_mode: (TextureAddressMode, TextureAddressMode),
     pub texel_mapping: (SpriteTexelRange, SpriteTexelRange),
@@ -60,7 +63,7 @@ pub struct Sprite {
 #[derive(Debug)]
 pub struct NinePatch {
     pub name: String,
-    pub sampler_handle: wgpu::Sampler,
+    pub sampler_handle: GfxSampler,
     pub filter_mode: TextureFilterMode,
     pub address_mode: (TextureAddressMode, TextureAddressMode),
     pub texel_mapping: (NinePatchTexelRange, NinePatchTexelRange),
@@ -68,9 +71,9 @@ pub struct NinePatch {
 
 /// Represents a texture asset. It supplies texture parameters too.
 pub trait TextureAsset: Asset {
-    fn handle(&self) -> &wgpu::Texture;
-    fn view_handle(&self) -> &wgpu::TextureView;
-    fn sampler_handle(&self) -> &wgpu::Sampler;
+    fn handle(&self) -> &GfxTexture;
+    fn view_handle(&self) -> &GfxTextureView;
+    fn sampler_handle(&self) -> &GfxSampler;
     fn width(&self) -> u16;
     fn height(&self) -> u16;
     fn format(&self) -> TextureFormat;
@@ -171,9 +174,9 @@ impl AssetSource for TextureSource {
 
 struct Texture {
     id: Uuid,
-    handle: wgpu::Texture,
-    view_handle: wgpu::TextureView,
-    sampler_handle: wgpu::Sampler,
+    handle: GfxTexture,
+    view_handle: GfxTextureView,
+    sampler_handle: GfxSampler,
     width: u16,
     height: u16,
     format: TextureFormat,
@@ -194,15 +197,15 @@ impl Asset for Texture {
 }
 
 impl TextureAsset for Texture {
-    fn handle(&self) -> &wgpu::Texture {
+    fn handle(&self) -> &GfxTexture {
         &self.handle
     }
 
-    fn view_handle(&self) -> &wgpu::TextureView {
+    fn view_handle(&self) -> &GfxTextureView {
         &self.view_handle
     }
 
-    fn sampler_handle(&self) -> &wgpu::Sampler {
+    fn sampler_handle(&self) -> &GfxSampler {
         &self.sampler_handle
     }
 

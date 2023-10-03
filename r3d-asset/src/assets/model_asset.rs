@@ -1,4 +1,6 @@
-use crate::{Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, TypedAsset};
+use crate::{
+    Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, GfxBuffer, TypedAsset,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -58,9 +60,9 @@ pub struct Mesh {
     pub index: u32,
     pub aabb: MeshAABB,
     pub index_type: VertexIndexType,
-    pub index_buffer: wgpu::Buffer,
+    pub index_buffer: GfxBuffer,
     pub vertex_attributes: Vec<VertexAttribute>,
-    pub vertex_buffer: wgpu::Buffer,
+    pub vertex_buffer: GfxBuffer,
     pub vertex_count: u32,
     // TODO: Should we add a (mesh) material here?
 }
