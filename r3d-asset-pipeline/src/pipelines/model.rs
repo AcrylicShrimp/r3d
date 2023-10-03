@@ -1,8 +1,8 @@
 use crate::{AssetPipeline, Metadata, PipelineGfxBridge};
 use anyhow::{anyhow, Context};
 use asset::assets::{
-    Mesh, MeshAABB, ModelSource, Node, NodeTransform, VertexAttribute, VertexAttributeKind,
-    VertexIndexType,
+    MeshAABB, MeshSource, ModelSource, NodeSource, NodeTransform, VertexAttribute,
+    VertexAttributeKind, VertexIndexType,
 };
 use byteorder::ByteOrder;
 use russimp::{
@@ -68,8 +68,8 @@ impl AssetPipeline for ModelSource {
 
 #[derive(Default)]
 struct SceneExtractor {
-    pub nodes: Vec<Node>,
-    pub meshes: Vec<Mesh>,
+    pub nodes: Vec<NodeSource>,
+    pub meshes: Vec<MeshSource>,
 }
 
 impl SceneExtractor {
@@ -84,7 +84,7 @@ impl SceneExtractor {
         parent_index: Option<u32>,
     ) -> u32 {
         let index = self.nodes.len() as u32;
-        self.nodes.push(Node {
+        self.nodes.push(NodeSource {
             index,
             parent_index,
             children_indices: vec![],
@@ -141,7 +141,7 @@ impl SceneExtractor {
     }
 }
 
-fn convert_mesh(index: u32, mesh: &russimp::mesh::Mesh) -> Mesh {
+fn convert_mesh(index: u32, mesh: &russimp::mesh::Mesh) -> MeshSource {
     let mut vertex_attributes = Vec::with_capacity(8);
     let mut offset = 0;
 
@@ -284,7 +284,7 @@ fn convert_mesh(index: u32, mesh: &russimp::mesh::Mesh) -> Mesh {
         max: [mesh.aabb.max.x, mesh.aabb.max.y, mesh.aabb.max.z],
     };
 
-    Mesh {
+    MeshSource {
         index,
         aabb,
         index_type,

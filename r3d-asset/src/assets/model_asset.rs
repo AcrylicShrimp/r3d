@@ -2,6 +2,7 @@ use crate::{Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, Ty
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
+use wgpu::BufferUsages;
 
 /// Index element type of a mesh.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -43,7 +44,36 @@ pub struct NodeTransform {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Node {
+    pub index: u32,
+    pub parent_index: Option<u32>,
+    pub children_indices: Vec<u32>,
+    pub name: String,
+    pub transform: NodeTransform,
+    pub mesh_indices: Vec<u32>,
+}
+
+#[derive(Debug)]
 pub struct Mesh {
+    pub index: u32,
+    pub aabb: MeshAABB,
+    pub index_type: VertexIndexType,
+    pub index_buffer: wgpu::Buffer,
+    pub vertex_attributes: Vec<VertexAttribute>,
+    pub vertex_buffer: wgpu::Buffer,
+    pub vertex_count: u32,
+    // TODO: Should we add a (mesh) material here?
+}
+
+/// Represents a mesy asset.
+pub trait ModelAsset: Asset {
+    fn root_node_index(&self) -> Option<u32>;
+    fn nodes(&self) -> &[Node];
+    fn meshes(&self) -> &[Mesh];
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MeshSource {
     pub index: u32,
     pub aabb: MeshAABB,
     pub index_type: VertexIndexType,
@@ -56,28 +86,13 @@ pub struct Mesh {
     // TODO: Should we add a (mesh) material here?
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Node {
-    pub index: u32,
-    pub parent_index: Option<u32>,
-    pub children_indices: Vec<u32>,
-    pub name: String,
-    pub transform: NodeTransform,
-    pub mesh_indices: Vec<u32>,
-}
-
-/// Represents a mesy asset.
-pub trait ModelAsset: Asset {
-    fn root_node_index(&self) -> Option<u32>;
-    fn nodes(&self) -> &[Node];
-    fn meshes(&self) -> &[Mesh];
-}
+pub type NodeSource = Node;
 
 #[derive(Serialize, Deserialize)]
 pub struct ModelSource {
     pub root_node_index: Option<u32>,
-    pub nodes: Vec<Node>,
-    pub meshes: Vec<Mesh>,
+    pub nodes: Vec<NodeSource>,
+    pub meshes: Vec<MeshSource>,
 }
 
 impl AssetSource for ModelSource {
@@ -91,13 +106,27 @@ impl AssetSource for ModelSource {
         self,
         id: Uuid,
         _deps_provider: &dyn AssetDepsProvider,
-        _gfx_bridge: &dyn GfxBridge,
+        gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError> {
         Ok(Arc::new(Model {
             id,
             root_node_index: self.root_node_index,
             nodes: self.nodes,
-            meshes: self.meshes,
+            meshes: self
+                .meshes
+                .into_iter()
+                .map(|mesh| Mesh {
+                    index: mesh.index,
+                    aabb: mesh.aabb,
+                    index_type: mesh.index_type,
+                    index_buffer: gfx_bridge
+                        .upload_vertex_buffer(BufferUsages::INDEX, &mesh.index_buffer),
+                    vertex_attributes: mesh.vertex_attributes,
+                    vertex_buffer: gfx_bridge
+                        .upload_vertex_buffer(BufferUsages::VERTEX, &mesh.vertex_buffer),
+                    vertex_count: mesh.vertex_count,
+                })
+                .collect(),
         }))
     }
 }
