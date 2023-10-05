@@ -162,9 +162,10 @@ impl RenderManager {
     }
 
     pub fn finish_frame(&mut self, command_buffers: Vec<CommandBuffer>) {
-        self.gfx_ctx
-            .queue
-            .submit(vec![self.frame_buffer_allocator.finish()]);
-        self.gfx_ctx.queue.submit(command_buffers);
+        self.gfx_ctx.queue.submit(
+            std::iter::once(self.frame_buffer_allocator.finish())
+                .chain(command_buffers.into_iter()),
+        );
+        self.frame_buffer_allocator.recall();
     }
 }
