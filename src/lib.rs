@@ -29,7 +29,7 @@ use std::{
 };
 use thiserror::Error;
 use transform::Transform;
-use ui::{UIElement, UIEventManager, UIRaycastManager, UIScaler, UISize};
+use wgpu::MaintainBase;
 use winit::{
     dpi::{LogicalSize, PhysicalSize},
     event::{Event, WindowEvent},
@@ -487,6 +487,7 @@ impl Engine {
                         window_occluded = false;
                     }
 
+                    self.ctx.gfx_ctx().device.poll(MaintainBase::Wait);
                     self.ctx.gfx_ctx().resize(inner_size);
                     self.ctx.render_mgr_mut().resize(inner_size);
 
