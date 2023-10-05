@@ -1,5 +1,5 @@
 use asset::{
-    assets::{FontSource, ModelSource, ShaderSource, TextureSource},
+    assets::{FontSource, MaterialSource, ModelSource, ShaderSource, TextureSource},
     AssetType,
 };
 use std::path::{Path, PathBuf};
@@ -16,6 +16,7 @@ pub use pipeline_gfx_bridge::*;
 
 pub enum TypedAssetSource {
     Font(FontSource),
+    Material(MaterialSource),
     Model(ModelSource),
     Shader(ShaderSource),
     Texture(TextureSource),
@@ -24,6 +25,12 @@ pub enum TypedAssetSource {
 impl From<FontSource> for TypedAssetSource {
     fn from(value: FontSource) -> Self {
         Self::Font(value)
+    }
+}
+
+impl From<MaterialSource> for TypedAssetSource {
+    fn from(value: MaterialSource) -> Self {
+        Self::Material(value)
     }
 }
 
@@ -69,6 +76,12 @@ pub fn process_asset(
             let asset = FontSource::process(file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
+        AssetType::Material => {
+            let metadata = Metadata::from_toml(metadata_content)?;
+            let file_content = std::fs::read(path)?;
+            let asset = MaterialSource::process(file_content, &metadata, gfx_bridge)?;
+            Ok(asset.into())
+        }
         AssetType::Model => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
@@ -111,6 +124,7 @@ pub fn deduce_asset_type_from_path(
 
     match extension.to_lowercase().as_str() {
         "ttf" | "otf" => Ok(AssetType::Font),
+        "mat" => Ok(AssetType::Material),
         "gltf" | "glb" | "fbx" | "obj" | "3ds" | "blender" => Ok(AssetType::Model),
         "png" | "jpg" | "jpeg" | "gif" | "tif" | "tiff" | "tga" | "bmp" | "webp" => {
             Ok(AssetType::Texture)

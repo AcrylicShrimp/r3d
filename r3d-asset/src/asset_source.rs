@@ -19,6 +19,18 @@ pub enum AssetLoadError {
         expected_ty: AssetType,
         actual_ty: AssetType,
     },
+    #[error("invalid sprite name: texture `{texture_id}` does not contain sprite `{sprite_name}`")]
+    InvalidSpriteName {
+        texture_id: Uuid,
+        sprite_name: String,
+    },
+    #[error(
+        "invalid nine-patch name: texture `{texture_id}` does not contain nine-patch `{nine_patch_name}`"
+    )]
+    InvalidNinePatchName {
+        texture_id: Uuid,
+        nine_patch_name: String,
+    },
     #[error("{0}")]
     Other(String),
 }
