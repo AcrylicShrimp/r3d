@@ -14,6 +14,7 @@ categories = ["game-development", "game-engines"]
 asset = { path = "./r3d-asset" }
 asset-loader = { path = "./r3d-asset-loader" }
 codegen = { path = "./r3d-codegen" }
+logging = { path = "./r3d-logging" }
 
 bitvec = { version = "1" }
 colored = { version = "2" }
@@ -40,4 +41,5 @@ members = [
   "./r3d-asset-pipeline",
   "./r3d-codegen",
   "./r3d-editor",
+  "./r3d-logging",
 ]
