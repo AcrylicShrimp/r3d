@@ -9,6 +9,7 @@ use wgpu::{
 };
 use winit::{dpi::PhysicalSize, window::Window};
 
+mod built_in_shader_manager;
 mod camera;
 mod color;
 mod depth_stencil;
@@ -23,6 +24,7 @@ mod screen_mgr;
 mod sprite;
 mod texture;
 
+pub use built_in_shader_manager::*;
 pub use camera::*;
 pub use color::*;
 pub use depth_stencil::*;

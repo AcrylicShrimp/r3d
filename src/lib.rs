@@ -15,7 +15,7 @@ use ecs_system::{
     update_ui_raycast_grid::UpdateUIRaycastGrid, update_ui_scaler::UpdateUIScaler,
 };
 use event::{event_types, EventManager};
-use gfx::{GlyphManager, MeshRenderer, UIElementRenderer, UITextRenderer};
+use gfx::{BuiltInShaderManager, GlyphManager, MeshRenderer, UIElementRenderer, UITextRenderer};
 use input::InputManager;
 use math::Vec2;
 use object::{Object, ObjectManager};
@@ -29,6 +29,7 @@ use std::{
 };
 use thiserror::Error;
 use transform::Transform;
+use ui::{UIElement, UIEventManager, UIRaycastManager, UIScaler, UISize};
 use wgpu::MaintainBase;
 use winit::{
     dpi::{LogicalSize, PhysicalSize},
@@ -72,6 +73,7 @@ pub struct Context {
     render_mgr: RefCell<RenderManager>,
     glyph_mgr: RefCell<GlyphManager>,
     shader_mgr: ShaderManager,
+    built_in_shader_mgr: BuiltInShaderManager,
     ui_raycast_mgr: RefCell<UIRaycastManager>,
     ui_event_mgr: RefCell<UIEventManager>,
     time_mgr: RefCell<TimeManager>,
@@ -86,7 +88,7 @@ impl Context {
         let world = World::new().into();
         let object_mgr = ObjectManager::new().into();
         let screen_mgr = ScreenManager::new(screen_width, screen_height).into();
-        let render_mgr = RenderManager::new(
+        let render_mgr: RefCell<RenderManager> = RenderManager::new(
             gfx_ctx.clone(),
             PhysicalSize::new(screen_width, screen_height),
             DepthStencilMode::DepthOnly,
@@ -94,6 +96,11 @@ impl Context {
         .into();
         let glyph_mgr = GlyphManager::new(gfx_ctx.clone()).into();
         let shader_mgr = ShaderManager::new(gfx_ctx.clone());
+        let mut built_in_shader_mgr = BuiltInShaderManager::new();
+        built_in_shader_mgr.init(
+            &shader_mgr,
+            render_mgr.borrow_mut().bind_group_layout_cache(),
+        );
         let ui_raycast_mgr = UIRaycastManager::new().into();
         let ui_event_mgr = UIEventManager::new().into();
         let time_mgr = TimeManager::new().into();
@@ -110,6 +117,7 @@ impl Context {
             render_mgr,
             glyph_mgr,
             shader_mgr,
+            built_in_shader_mgr: built_in_shader_mgr.into(),
             ui_raycast_mgr,
             ui_event_mgr,
             time_mgr,
@@ -169,6 +177,10 @@ impl Context {
 
     pub fn shader_mgr(&self) -> &ShaderManager {
         &self.shader_mgr
+    }
+
+    pub fn built_in_shader_mgr(&self) -> &BuiltInShaderManager {
+        &self.built_in_shader_mgr
     }
 
     pub fn ui_raycast_mgr(&self) -> Ref<UIRaycastManager> {
