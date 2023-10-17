@@ -109,12 +109,7 @@ impl<'r> RenderingCommand<'r> {
             if let Some(buffer) = &self.instance_buffer {
                 // Instance buffer's slot is always the last one. See [pipeline_provider::PipelineProvider].
                 render_pass.set_vertex_buffer(
-                    self.material
-                        .shader
-                        .reflected_shader
-                        .per_vertex_input
-                        .elements
-                        .len() as u32,
+                    self.vertex_buffer_provider.vertex_buffer_count(),
                     buffer.as_slice(),
                 );
             }

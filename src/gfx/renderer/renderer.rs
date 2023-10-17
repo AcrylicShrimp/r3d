@@ -41,6 +41,7 @@ pub struct VertexBuffer<'a> {
 }
 
 pub trait VertexBufferProvider {
+    fn vertex_buffer_count(&self) -> u32;
     fn vertex_buffer(&self, key: SemanticShaderInputKey) -> Option<VertexBuffer>;
 }
 

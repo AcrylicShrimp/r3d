@@ -327,6 +327,10 @@ struct UITextRendererVertexBufferProvider {
 }
 
 impl VertexBufferProvider for UITextRendererVertexBufferProvider {
+    fn vertex_buffer_count(&self) -> u32 {
+        1
+    }
+
     fn vertex_buffer(&self, key: SemanticShaderInputKey) -> Option<VertexBuffer> {
         match key {
             semantic_inputs::KEY_POSITION => Some(VertexBuffer {
