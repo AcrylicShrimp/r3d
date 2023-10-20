@@ -29,7 +29,7 @@ pub struct PmxTexture {
 impl Parse for PmxTexture {
     type Error = PmxTextureParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // texture path (dynamic size)
         let path = String::parse(config, cursor)?;
 
@@ -40,10 +40,10 @@ impl Parse for PmxTexture {
 impl Parse for Vec<PmxTexture> {
     type Error = PmxTextureParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // texture count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut textures = Vec::with_capacity(count);

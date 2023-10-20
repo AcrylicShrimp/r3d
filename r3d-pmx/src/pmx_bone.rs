@@ -41,7 +41,7 @@ pub struct PmxBone {
 impl Parse for PmxBone {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // dynamic size
         let name_local = String::parse(config, cursor)?;
         let name_universal = String::parse(config, cursor)?;
@@ -51,7 +51,7 @@ impl Parse for PmxBone {
         // layer (4 bytes)
         // flags (2 bytes)
         let size = 12 + config.bone_index_size.size() + 4 + 2;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let position = PmxVec3::parse(config, cursor)?;
         let parent_index = PmxBoneIndex::parse(config, cursor)?;
@@ -63,7 +63,7 @@ impl Parse for PmxBone {
             true => {
                 // tail bone index (N bytes)
                 let size = config.bone_index_size.size();
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 PmxBoneTailPosition::BoneIndex {
                     index: PmxBoneIndex::parse(config, cursor)?,
@@ -72,7 +72,7 @@ impl Parse for PmxBone {
             false => {
                 // tail position (12 bytes)
                 let size = 12;
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 PmxBoneTailPosition::Vec3 {
                     position: PmxVec3::parse(config, cursor)?,
@@ -84,7 +84,7 @@ impl Parse for PmxBone {
                 // bone index (N bytes)
                 // coefficient (4 bytes)
                 let size = config.bone_index_size.size() + 4;
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 let index = PmxBoneIndex::parse(config, cursor)?;
                 let coefficient = f32::parse(config, cursor)?;
@@ -139,10 +139,10 @@ impl Parse for PmxBone {
 impl Parse for Vec<PmxBone> {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // bone count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut bones = Vec::with_capacity(count);
@@ -186,7 +186,7 @@ pub struct PmxBoneFlags {
 impl Parse for PmxBoneFlags {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since bone flags has a fixed size, we don't need to check the size here
         let flag_1 = u8::parse(config, cursor)?;
         let flag_2 = u8::parse(config, cursor)?;
@@ -249,10 +249,10 @@ pub struct PmxBoneFixedAxis {
 impl Parse for PmxBoneFixedAxis {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // direction (12 bytes)
         let size = 12;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let direction = PmxVec3::parse(config, cursor)?;
 
@@ -269,11 +269,11 @@ pub struct PmxBoneLocalCoordinate {
 impl Parse for PmxBoneLocalCoordinate {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // x axis (12 bytes)
         // z axis (12 bytes)
         let size = 12 + 12;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let x_axis = PmxVec3::parse(config, cursor)?;
         let z_axis = PmxVec3::parse(config, cursor)?;
@@ -291,10 +291,10 @@ pub struct PmxBoneExternalParent {
 impl Parse for PmxBoneExternalParent {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // external parent index (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let index = i32::parse(config, cursor)?;
 
@@ -314,12 +314,12 @@ pub struct PmxBoneIK {
 impl Parse for PmxBoneIK {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // bone index (N bytes)
         // loop count (4 bytes)
         // limit angle (4 bytes)
         let size = config.bone_index_size.size() + 4 + 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let index = PmxBoneIndex::parse(config, cursor)?;
         let loop_count = i32::parse(config, cursor)?;
@@ -346,10 +346,10 @@ pub struct PmxBoneIKLink {
 impl Parse for PmxBoneIKLink {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // bone index (N bytes)
         let size = config.bone_index_size.size();
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let index = PmxBoneIndex::parse(config, cursor)?;
 
@@ -363,10 +363,10 @@ impl Parse for PmxBoneIKLink {
 impl Parse for Vec<PmxBoneIKLink> {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // link count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut links = Vec::with_capacity(count);
@@ -390,7 +390,7 @@ pub struct PmxBoneIKAngleLimit {
 impl Parse for PmxBoneIKAngleLimit {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since angle limit has a fixed size, we don't need to check the size here
         let min = PmxVec3::parse(config, cursor)?;
         let max = PmxVec3::parse(config, cursor)?;
@@ -402,20 +402,20 @@ impl Parse for PmxBoneIKAngleLimit {
 impl Parse for Option<PmxBoneIKAngleLimit> {
     type Error = PmxBoneParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // has angle limit (1 byte)
         let size = 1;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
-        let has_angle_limit = u8::parse(config, &mut cursor.checked())?;
+        let has_angle_limit = bool::parse(config, cursor)?;
 
-        if has_angle_limit == 0 {
+        if !has_angle_limit {
             return Ok(None);
         }
 
         // angle limit (12 * 2 bytes)
         let size = 12 * 2;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let angle_limit = PmxBoneIKAngleLimit::parse(config, cursor)?;
 

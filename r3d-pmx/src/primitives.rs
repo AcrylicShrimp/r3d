@@ -26,7 +26,7 @@ impl ParseError for RustPrimitiveParseError {
 impl Parse for bool {
     type Error = RustPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         Ok(u8::parse(config, cursor)? != 0)
     }
 }
@@ -34,7 +34,7 @@ impl Parse for bool {
 impl Parse for i8 {
     type Error = RustPrimitiveParseError;
 
-    fn parse(_config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         Ok(i8::from_le_bytes(
             *cursor.read::<RustPrimitiveParseError, 1>()?,
         ))
@@ -44,7 +44,7 @@ impl Parse for i8 {
 impl Parse for i16 {
     type Error = RustPrimitiveParseError;
 
-    fn parse(_config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         Ok(i16::from_le_bytes(
             *cursor.read::<RustPrimitiveParseError, 2>()?,
         ))
@@ -54,7 +54,7 @@ impl Parse for i16 {
 impl Parse for i32 {
     type Error = RustPrimitiveParseError;
 
-    fn parse(_config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         Ok(i32::from_le_bytes(
             *cursor.read::<RustPrimitiveParseError, 4>()?,
         ))
@@ -64,7 +64,7 @@ impl Parse for i32 {
 impl Parse for u8 {
     type Error = RustPrimitiveParseError;
 
-    fn parse(_config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         Ok(u8::from_le_bytes(
             *cursor.read::<RustPrimitiveParseError, 1>()?,
         ))
@@ -74,7 +74,7 @@ impl Parse for u8 {
 impl Parse for u16 {
     type Error = RustPrimitiveParseError;
 
-    fn parse(_config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         Ok(u16::from_le_bytes(
             *cursor.read::<RustPrimitiveParseError, 2>()?,
         ))
@@ -84,7 +84,7 @@ impl Parse for u16 {
 impl Parse for u32 {
     type Error = RustPrimitiveParseError;
 
-    fn parse(_config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         Ok(u32::from_le_bytes(
             *cursor.read::<RustPrimitiveParseError, 4>()?,
         ))
@@ -94,7 +94,7 @@ impl Parse for u32 {
 impl Parse for f32 {
     type Error = RustPrimitiveParseError;
 
-    fn parse(_config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         Ok(f32::from_le_bytes(
             *cursor.read::<RustPrimitiveParseError, 4>()?,
         ))
@@ -104,16 +104,16 @@ impl Parse for f32 {
 impl Parse for String {
     type Error = RustPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // string length (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let len = u32::parse(config, cursor)? as usize;
 
         // string data (len bytes)
         let size = len;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         match config.text_encoding {
             PmxTextEncoding::Utf16le => {

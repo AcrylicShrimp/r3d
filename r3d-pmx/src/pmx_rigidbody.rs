@@ -45,7 +45,7 @@ pub struct PmxRigidbody {
 impl Parse for PmxRigidbody {
     type Error = PmxRigidbodyParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // dynamic size
         let name_local = String::parse(config, cursor)?;
         let name_universal = String::parse(config, cursor)?;
@@ -61,7 +61,7 @@ impl Parse for PmxRigidbody {
         // friction_coefficient (4 bytes)
         // physics_mode (1 byte)
         let size = config.bone_index_size.size() + 1 + 2 + 37 + 4 + 4 + 4 + 4 + 4 + 1;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let bone_index = PmxBoneIndex::parse(config, cursor)?;
         let group_id = i8::parse(config, cursor)?;
@@ -94,10 +94,10 @@ impl Parse for PmxRigidbody {
 impl Parse for Vec<PmxRigidbody> {
     type Error = PmxRigidbodyParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut rigidbodies = Vec::with_capacity(count);
@@ -122,7 +122,7 @@ pub struct PmxRigidbodyShape {
 impl Parse for PmxRigidbodyShape {
     type Error = PmxRigidbodyParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since shape has a fixed size, we don't need to check the size here
         let kind = PmxRigidbodyShapeKind::parse(config, cursor)?;
         let size = PmxVec3::parse(config, cursor)?;
@@ -148,7 +148,7 @@ pub enum PmxRigidbodyShapeKind {
 impl Parse for PmxRigidbodyShapeKind {
     type Error = PmxRigidbodyParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since shape kind has a fixed size, we don't need to check the size here
         let kind = u8::parse(config, cursor)?;
 
@@ -171,7 +171,7 @@ pub enum PmxRigidbodyPhysicsMode {
 impl Parse for PmxRigidbodyPhysicsMode {
     type Error = PmxRigidbodyParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since physics mode has a fixed size, we don't need to check the size here
         let mode = u8::parse(config, cursor)?;
 

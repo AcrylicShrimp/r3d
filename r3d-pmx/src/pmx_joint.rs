@@ -45,7 +45,7 @@ pub struct PmxJoint {
 impl Parse for PmxJoint {
     type Error = PmxJointParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // dynamic size
         let name_local = String::parse(config, cursor)?;
         let name_universal = String::parse(config, cursor)?;
@@ -61,7 +61,7 @@ impl Parse for PmxJoint {
         // spring_position (12 bytes)
         // spring_rotation (12 bytes)
         let size = 1 + config.rigidbody_index_size.size() * 2 + 12 * 8;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let kind = PmxJointKind::parse(config, cursor)?;
         let rigidbody_index_1 = PmxRigidbodyIndex::parse(config, cursor)?;
@@ -95,10 +95,10 @@ impl Parse for PmxJoint {
 impl Parse for Vec<PmxJoint> {
     type Error = PmxJointParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut joints = Vec::with_capacity(count);
@@ -119,7 +119,7 @@ pub enum PmxJointKind {
 impl Parse for PmxJointKind {
     type Error = PmxJointParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since joint kind has a fixed size, we don't need to check the size here
         let kind = u8::parse(config, cursor)?;
 

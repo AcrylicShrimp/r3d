@@ -38,13 +38,13 @@ pub struct PmxVertex {
 impl Parse for PmxVertex {
     type Error = PmxVertexParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // position (12 bytes)
         // normal (12 bytes)
         // uv (8 bytes)
         // additional vec4s (16 bytes) * 4
         let size = 12 + 12 + 8 + 16 * 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let position = PmxVec3::parse(config, cursor)?;
         let normal = PmxVec3::parse(config, cursor)?;
@@ -65,7 +65,7 @@ impl Parse for PmxVertex {
 
         // edge size (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let edge_size = f32::parse(config, cursor)?;
 
@@ -83,10 +83,10 @@ impl Parse for PmxVertex {
 impl Parse for Vec<PmxVertex> {
     type Error = PmxVertexParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // vertex count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut vertices = Vec::with_capacity(count);
@@ -132,14 +132,18 @@ pub enum PmxVertexDeformKind {
 impl Parse for PmxVertexDeformKind {
     type Error = PmxVertexParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
-        let kind = u8::parse(config, &mut cursor.checked())?;
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
+        // deform kind (1 byte)
+        let size = 1;
+        cursor.ensure_bytes::<Self::Error>(size)?;
+
+        let kind = u8::parse(config, cursor)?;
 
         Ok(match kind {
             0 => {
                 // bone index (N byte) * 1
                 let size = config.bone_index_size.size() * 1;
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 let bone_index = PmxBoneIndex::parse(config, cursor)?;
 
@@ -149,7 +153,7 @@ impl Parse for PmxVertexDeformKind {
                 // bone index (N bytes) * 2
                 // bone weight (4 bytes)
                 let size = config.bone_index_size.size() * 2 + 4;
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 let bone_index_1 = PmxBoneIndex::parse(config, cursor)?;
                 let bone_index_2 = PmxBoneIndex::parse(config, cursor)?;
@@ -165,7 +169,7 @@ impl Parse for PmxVertexDeformKind {
                 // bone index (N bytes) * 4
                 // bone weight (4 bytes) * 4
                 let size = config.bone_index_size.size() * 4 + 4 * 4;
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 let bone_index_1 = PmxBoneIndex::parse(config, cursor)?;
                 let bone_index_2 = PmxBoneIndex::parse(config, cursor)?;
@@ -194,7 +198,7 @@ impl Parse for PmxVertexDeformKind {
                 // r0 (12 bytes)
                 // r1 (12 bytes)
                 let size = config.bone_index_size.size() * 2 + 4 + 12 * 3;
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 let bone_index_1 = PmxBoneIndex::parse(config, cursor)?;
                 let bone_index_2 = PmxBoneIndex::parse(config, cursor)?;

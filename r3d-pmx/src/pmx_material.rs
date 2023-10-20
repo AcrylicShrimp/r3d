@@ -51,7 +51,7 @@ pub struct PmxMaterial {
 impl Parse for PmxMaterial {
     type Error = PmxMaterialParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // dynamic size
         let name_local = String::parse(config, cursor)?;
         let name_universal = String::parse(config, cursor)?;
@@ -76,7 +76,7 @@ impl Parse for PmxMaterial {
             + config.texture_index_size.size()
             + config.texture_index_size.size()
             + 1;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let diffuse_color = PmxVec4::parse(config, cursor)?;
         let specular_color = PmxVec3::parse(config, cursor)?;
@@ -95,7 +95,7 @@ impl Parse for PmxMaterial {
 
         // surface count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let surface_count = u32::parse(config, cursor)?;
 
@@ -122,10 +122,10 @@ impl Parse for PmxMaterial {
 impl Parse for Vec<PmxMaterial> {
     type Error = PmxMaterialParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // material count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let material_count = u32::parse(config, cursor)?;
         let mut materials = Vec::with_capacity(material_count as usize);
@@ -155,7 +155,7 @@ pub struct PmxMaterialFlags {
 impl Parse for PmxMaterialFlags {
     type Error = PmxMaterialParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since material flags has a fixed size, we don't need to check the size here
         let flags = u8::parse(config, cursor)?;
 
@@ -187,7 +187,7 @@ pub enum PmxMaterialEnvironmentBlendMode {
 impl Parse for PmxMaterialEnvironmentBlendMode {
     type Error = PmxMaterialParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since environment blend mode has a fixed size, we don't need to check the size here
         let mode = u8::parse(config, cursor)?;
 
@@ -213,21 +213,29 @@ pub enum PmxMaterialToonMode {
 impl Parse for PmxMaterialToonMode {
     type Error = PmxMaterialParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // toon mode (1 byte)
         let size = 1;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let toon_mode = u8::parse(config, cursor)?;
 
         Ok(match toon_mode {
             0 => {
-                let index = PmxTextureIndex::parse(config, &mut cursor.checked())?;
+                // texture index (N bytes)
+                let size = config.texture_index_size.size();
+                cursor.ensure_bytes::<Self::Error>(size)?;
+
+                let index = PmxTextureIndex::parse(config, cursor)?;
 
                 Self::Texture { index }
             }
             1 => {
-                let index = u8::parse(config, &mut cursor.checked())?;
+                // internal texture index (1 byte)
+                let size = 1;
+                cursor.ensure_bytes::<Self::Error>(size)?;
+
+                let index = u8::parse(config, cursor)?;
 
                 Self::InternalTexture { index }
             }

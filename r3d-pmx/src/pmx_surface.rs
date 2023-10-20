@@ -33,7 +33,7 @@ pub struct PmxSurface {
 impl Parse for PmxSurface {
     type Error = PmxSurfaceParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since surface has a fixed size, we don't need to check the size here
         let vertex_index_1 = PmxVertexIndex::parse(config, cursor)?;
         let vertex_index_2 = PmxVertexIndex::parse(config, cursor)?;
@@ -48,10 +48,10 @@ impl Parse for PmxSurface {
 impl Parse for Vec<PmxSurface> {
     type Error = PmxSurfaceParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // surface count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         // surface count is vertex count, not actual surface count in PMX
         let count = u32::parse(config, cursor)? as usize;
@@ -63,7 +63,7 @@ impl Parse for Vec<PmxSurface> {
 
         // surface data (count * vertex_index_size bytes)
         let size = count * config.vertex_index_size.size();
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = count / 3;
         let mut surfaces = Vec::with_capacity(count);

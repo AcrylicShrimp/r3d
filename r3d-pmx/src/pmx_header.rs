@@ -44,16 +44,14 @@ pub struct PmxHeader {
 }
 
 impl PmxHeader {
-    pub fn parse(cursor: &mut impl Cursor) -> Result<Self, PmxHeaderParseError> {
+    pub fn parse(cursor: &mut Cursor) -> Result<Self, PmxHeaderParseError> {
         /// Minimum size of PMX 2.0 header.
         /// - 4 bytes: signature
         /// - 4 bytes: version
         /// - 1 byte: global count
         /// - 8 bytes: globals (fixed 8 bytes in PMX 2.0)
         const HEADER_SIZE: usize = 4 + 4 + 1 + 8;
-        cursor
-            .checked()
-            .ensure_bytes::<PmxHeaderParseError>(HEADER_SIZE)?;
+        cursor.ensure_bytes::<PmxHeaderParseError>(HEADER_SIZE)?;
 
         // typically the signature is `PMX ` as 4 bytes, but some files do not have a space at the end
         let signature = *cursor.read::<PmxHeaderParseError, 4>()?;
@@ -70,11 +68,10 @@ impl PmxHeader {
 
         let config = PmxConfig::parse(cursor)?;
 
-        let mut cursor = cursor.checked();
-        let model_name_local = String::parse(&config, &mut cursor)?;
-        let model_name_universal = String::parse(&config, &mut cursor)?;
-        let model_comment_local = String::parse(&config, &mut cursor)?;
-        let model_comment_universal = String::parse(&config, &mut cursor)?;
+        let model_name_local = String::parse(&config, cursor)?;
+        let model_name_universal = String::parse(&config, cursor)?;
+        let model_comment_local = String::parse(&config, cursor)?;
+        let model_comment_universal = String::parse(&config, cursor)?;
 
         Ok(Self {
             signature,
@@ -101,7 +98,7 @@ pub struct PmxConfig {
 }
 
 impl PmxConfig {
-    pub fn parse(cursor: &mut impl Cursor) -> Result<Self, PmxHeaderParseError> {
+    pub fn parse(cursor: &mut Cursor) -> Result<Self, PmxHeaderParseError> {
         // global count is fixed to 8 in PMX 2.0
         let global_count = cursor.read::<PmxHeaderParseError, 1>()?[0];
         if global_count != 8 {

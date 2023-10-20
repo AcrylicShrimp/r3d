@@ -13,7 +13,7 @@ mod pmx_texture;
 mod pmx_vertex;
 mod primitives;
 
-use cursor::UncheckedCursor;
+use cursor::Cursor;
 use parse::Parse;
 use pmx_bone::PmxBone;
 use pmx_display::PmxDisplay;
@@ -67,8 +67,8 @@ pub struct Pmx {
 }
 
 impl Pmx {
-    pub fn parse(buf: Vec<u8>) -> Result<Self, PmxParseError> {
-        let mut cursor = UncheckedCursor::new(buf);
+    pub fn parse(buf: impl AsRef<[u8]>) -> Result<Self, PmxParseError> {
+        let mut cursor = Cursor::new(buf.as_ref());
 
         let header = PmxHeader::parse(&mut cursor)?;
         let vertices = Vec::parse(&header.config, &mut cursor)?;

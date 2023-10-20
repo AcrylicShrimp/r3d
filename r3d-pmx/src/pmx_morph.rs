@@ -40,14 +40,14 @@ pub struct PmxMorph {
 impl Parse for PmxMorph {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // dynamic size
         let name_local = String::parse(config, cursor)?;
         let name_universal = String::parse(config, cursor)?;
 
         // panel kind (1 byte)
         let size = 1;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let panel_kind = PmxMorphPanelKind::parse(config, cursor)?;
 
@@ -66,10 +66,10 @@ impl Parse for PmxMorph {
 impl Parse for Vec<PmxMorph> {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // morph count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut morphs = Vec::with_capacity(count);
@@ -98,7 +98,7 @@ pub enum PmxMorphPanelKind {
 impl Parse for PmxMorphPanelKind {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let kind = u8::parse(config, cursor)?;
 
         match kind {
@@ -130,10 +130,10 @@ pub enum PmxMorphOffset {
 impl Parse for PmxMorphOffset {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // offset kind (1 byte)
         let size = 1;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let kind = u8::parse(config, cursor)?;
 
@@ -162,16 +162,16 @@ pub trait PmxMorphOffsetSizeHint {
 impl<T: Parse<Error = PmxMorphParseError> + PmxMorphOffsetSizeHint> Parse for Vec<T> {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // offset count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
 
         // offset data (count * size_hint bytes)
         let size = count * T::size_hint(config);
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let mut offsets = Vec::with_capacity(count);
 
@@ -198,7 +198,7 @@ impl PmxMorphOffsetSizeHint for PmxMorphOffsetGroup {
 impl Parse for PmxMorphOffsetGroup {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since group morph offset has a fixed size, we don't need to check the size here
         let index = PmxMorphIndex::parse(config, cursor)?;
         let coefficient = f32::parse(config, cursor)?;
@@ -222,7 +222,7 @@ impl PmxMorphOffsetSizeHint for PmxMorphOffsetVertex {
 impl Parse for PmxMorphOffsetVertex {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since vertex morph offset has a fixed size, we don't need to check the size here
         let index = PmxVertexIndex::parse(config, cursor)?;
         let translation = PmxVec3::parse(config, cursor)?;
@@ -247,7 +247,7 @@ impl PmxMorphOffsetSizeHint for PmxMorphOffsetBone {
 impl Parse for PmxMorphOffsetBone {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since bone morph offset has a fixed size, we don't need to check the size here
         let index = PmxBoneIndex::parse(config, cursor)?;
         let translation = PmxVec3::parse(config, cursor)?;
@@ -276,7 +276,7 @@ impl PmxMorphOffsetSizeHint for PmxMorphOffsetUv {
 impl Parse for PmxMorphOffsetUv {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since UV morph offset has a fixed size, we don't need to check the size here
         let index = PmxVertexIndex::parse(config, cursor)?;
         let vec4 = PmxVec4::parse(config, cursor)?;
@@ -309,7 +309,7 @@ impl PmxMorphOffsetSizeHint for PmxMorphOffsetMaterial {
 impl Parse for PmxMorphOffsetMaterial {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since material morph offset has a fixed size, we don't need to check the size here
         let index = PmxMaterialIndex::parse(config, cursor)?;
         let _unused = u8::parse(config, cursor)?;
@@ -353,7 +353,7 @@ impl PmxMorphOffsetSizeHint for PmxMorphOffsetFlip {
 impl Parse for PmxMorphOffsetFlip {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since flip morph offset has a fixed size, we don't need to check the size here
         let index = PmxMorphIndex::parse(config, cursor)?;
         let coefficient = f32::parse(config, cursor)?;
@@ -380,7 +380,7 @@ impl PmxMorphOffsetSizeHint for PmxMorphOffsetImpulse {
 impl Parse for PmxMorphOffsetImpulse {
     type Error = PmxMorphParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // since impulse morph offset has a fixed size, we don't need to check the size here
         let index = PmxRigidbodyIndex::parse(config, cursor)?;
         let is_local = bool::parse(config, cursor)?;

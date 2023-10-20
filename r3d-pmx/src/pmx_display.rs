@@ -35,14 +35,14 @@ pub struct PmxDisplay {
 impl Parse for PmxDisplay {
     type Error = PmxDisplayParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // dynamic size
         let name_local = String::parse(config, cursor)?;
         let name_universal = String::parse(config, cursor)?;
 
         // is_special (1 byte)
         let size = 1;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let is_special = bool::parse(config, cursor)?;
 
@@ -61,10 +61,10 @@ impl Parse for PmxDisplay {
 impl Parse for Vec<PmxDisplay> {
     type Error = PmxDisplayParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut displays = Vec::with_capacity(count);
@@ -86,10 +86,10 @@ pub enum PmxDisplayFrame {
 impl Parse for PmxDisplayFrame {
     type Error = PmxDisplayParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // kind (1 byte)
         let size = 1;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let kind = u8::parse(config, cursor)?;
 
@@ -97,7 +97,7 @@ impl Parse for PmxDisplayFrame {
             0 => {
                 // index (N bytes)
                 let size = config.bone_index_size.size();
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 let index = PmxBoneIndex::parse(config, cursor)?;
 
@@ -106,7 +106,7 @@ impl Parse for PmxDisplayFrame {
             1 => {
                 // index (N bytes)
                 let size = config.morph_index_size.size();
-                cursor.checked().ensure_bytes::<Self::Error>(size)?;
+                cursor.ensure_bytes::<Self::Error>(size)?;
 
                 let index = PmxMorphIndex::parse(config, cursor)?;
 
@@ -120,10 +120,10 @@ impl Parse for PmxDisplayFrame {
 impl Parse for Vec<PmxDisplayFrame> {
     type Error = PmxDisplayParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         // count (4 bytes)
         let size = 4;
-        cursor.checked().ensure_bytes::<Self::Error>(size)?;
+        cursor.ensure_bytes::<Self::Error>(size)?;
 
         let count = u32::parse(config, cursor)? as usize;
         let mut frames = Vec::with_capacity(count);

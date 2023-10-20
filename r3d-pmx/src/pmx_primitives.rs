@@ -67,7 +67,7 @@ define_index!(PmxRigidbodyIndex(i32));
 impl Parse for PmxVertexIndex {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let index = match config.vertex_index_size {
             PmxIndexSize::U8 => u8::parse(config, cursor)? as u32,
             PmxIndexSize::U16 => u16::parse(config, cursor)? as u32,
@@ -81,7 +81,7 @@ impl Parse for PmxVertexIndex {
 impl Parse for PmxTextureIndex {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let index = match config.texture_index_size {
             PmxIndexSize::U8 => i8::parse(config, cursor)? as i32,
             PmxIndexSize::U16 => i16::parse(config, cursor)? as i32,
@@ -95,7 +95,7 @@ impl Parse for PmxTextureIndex {
 impl Parse for PmxMaterialIndex {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let index = match config.material_index_size {
             PmxIndexSize::U8 => i8::parse(config, cursor)? as i32,
             PmxIndexSize::U16 => i16::parse(config, cursor)? as i32,
@@ -109,7 +109,7 @@ impl Parse for PmxMaterialIndex {
 impl Parse for PmxBoneIndex {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let index = match config.bone_index_size {
             PmxIndexSize::U8 => i8::parse(config, cursor)? as i32,
             PmxIndexSize::U16 => i16::parse(config, cursor)? as i32,
@@ -123,7 +123,7 @@ impl Parse for PmxBoneIndex {
 impl Parse for PmxMorphIndex {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let index = match config.morph_index_size {
             PmxIndexSize::U8 => i8::parse(config, cursor)? as i32,
             PmxIndexSize::U16 => i16::parse(config, cursor)? as i32,
@@ -137,7 +137,7 @@ impl Parse for PmxMorphIndex {
 impl Parse for PmxRigidbodyIndex {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let index = match config.rigidbody_index_size {
             PmxIndexSize::U8 => i8::parse(config, cursor)? as i32,
             PmxIndexSize::U16 => i16::parse(config, cursor)? as i32,
@@ -157,7 +157,7 @@ pub struct PmxVec2 {
 impl Parse for PmxVec2 {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let x = f32::parse(config, cursor)?;
         let y = f32::parse(config, cursor)?;
 
@@ -175,7 +175,7 @@ pub struct PmxVec3 {
 impl Parse for PmxVec3 {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let x = f32::parse(config, cursor)?;
         let y = f32::parse(config, cursor)?;
         let z = f32::parse(config, cursor)?;
@@ -195,7 +195,7 @@ pub struct PmxVec4 {
 impl Parse for PmxVec4 {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut impl Cursor) -> Result<Self, Self::Error> {
+    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
         let x = f32::parse(config, cursor)?;
         let y = f32::parse(config, cursor)?;
         let z = f32::parse(config, cursor)?;
