@@ -157,9 +157,10 @@ pub struct PmxVec2 {
 impl Parse for PmxVec2 {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
-        let x = f32::parse(config, cursor)?;
-        let y = f32::parse(config, cursor)?;
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
+        let bytes = cursor.read::<Self::Error, 8>()?;
+        let x = f32::from_le_bytes(bytes[0..4].try_into().unwrap());
+        let y = f32::from_le_bytes(bytes[4..8].try_into().unwrap());
 
         Ok(Self { x, y })
     }
@@ -175,10 +176,11 @@ pub struct PmxVec3 {
 impl Parse for PmxVec3 {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
-        let x = f32::parse(config, cursor)?;
-        let y = f32::parse(config, cursor)?;
-        let z = f32::parse(config, cursor)?;
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
+        let bytes = cursor.read::<Self::Error, 12>()?;
+        let x = f32::from_le_bytes(bytes[0..4].try_into().unwrap());
+        let y = f32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let z = f32::from_le_bytes(bytes[8..12].try_into().unwrap());
 
         Ok(Self { x, y, z })
     }
@@ -195,11 +197,12 @@ pub struct PmxVec4 {
 impl Parse for PmxVec4 {
     type Error = PmxPrimitiveParseError;
 
-    fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
-        let x = f32::parse(config, cursor)?;
-        let y = f32::parse(config, cursor)?;
-        let z = f32::parse(config, cursor)?;
-        let w = f32::parse(config, cursor)?;
+    fn parse(_config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
+        let bytes = cursor.read::<Self::Error, 16>()?;
+        let x = f32::from_le_bytes(bytes[0..4].try_into().unwrap());
+        let y = f32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let z = f32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let w = f32::from_le_bytes(bytes[12..16].try_into().unwrap());
 
         Ok(Self { x, y, z, w })
     }
