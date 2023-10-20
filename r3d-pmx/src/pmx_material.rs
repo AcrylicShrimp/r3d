@@ -123,14 +123,14 @@ impl Parse for Vec<PmxMaterial> {
     type Error = PmxMaterialParseError;
 
     fn parse(config: &PmxConfig, cursor: &mut Cursor) -> Result<Self, Self::Error> {
-        // material count (4 bytes)
+        // count (4 bytes)
         let size = 4;
         cursor.ensure_bytes::<Self::Error>(size)?;
 
-        let material_count = u32::parse(config, cursor)?;
-        let mut materials = Vec::with_capacity(material_count as usize);
+        let count = u32::parse(config, cursor)? as usize;
+        let mut materials = Vec::with_capacity(count);
 
-        for _ in 0..material_count {
+        for _ in 0..count {
             materials.push(PmxMaterial::parse(config, cursor)?);
         }
 
