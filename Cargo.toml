@@ -42,4 +42,5 @@ members = [
   "./r3d-codegen",
   "./r3d-editor",
   "./r3d-logging",
+  "./r3d-pmx",
 ]
