@@ -10,7 +10,10 @@ use naga::{
     TypeInner, VectorSize,
 };
 use serde::{Deserialize, Serialize};
-use std::num::{NonZeroU32, NonZeroU64};
+use std::{
+    num::{NonZeroU32, NonZeroU64},
+    path::Path,
+};
 use thiserror::Error;
 use wgpu::{
     BufferAddress, SamplerBindingType, TextureSampleType, TextureViewDimension, VertexAttribute,
@@ -34,6 +37,7 @@ impl AssetPipeline for ShaderSource {
     type Metadata = ShaderMetadata;
 
     fn process(
+        _file_path: &Path,
         file_content: Vec<u8>,
         _metadata: &crate::Metadata<Self::Metadata>,
         gfx_bridge: &dyn PipelineGfxBridge,

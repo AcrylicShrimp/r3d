@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 asset = { path = "../r3d-asset" }
+pmx = { path = "../r3d-pmx" }
 
 anyhow = { version = "1" }
 byteorder = { version = "1" }
@@ -18,3 +19,4 @@ thiserror = { version = "1" }
 toml = { version = "0.8" }
 uuid = { version = "1", features = ["v4", "serde"] }
 wgpu = { version = "0.17", features = ["replay", "serde", "trace"] }
+zerocopy = { version = "0.7" }

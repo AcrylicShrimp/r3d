@@ -1,6 +1,7 @@
 use crate::{AssetPipeline, Metadata, PipelineGfxBridge};
 use asset::assets::FontSource;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 #[derive(Serialize, Deserialize)]
 pub struct FontMetadata {
@@ -19,6 +20,7 @@ impl AssetPipeline for FontSource {
     type Metadata = FontMetadata;
 
     fn process(
+        _file_path: &Path,
         file_content: Vec<u8>,
         metadata: &Metadata<Self::Metadata>,
         _gfx_bridge: &dyn PipelineGfxBridge,

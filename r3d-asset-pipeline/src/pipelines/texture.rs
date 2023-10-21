@@ -5,7 +5,7 @@ use asset::assets::{
 };
 use image::io::Reader as ImageReader;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, io::Cursor};
+use std::{collections::HashMap, io::Cursor, path::Path};
 
 #[derive(Serialize, Deserialize)]
 pub struct TextureMetadata {
@@ -87,6 +87,7 @@ impl AssetPipeline for TextureSource {
     type Metadata = TextureMetadata;
 
     fn process(
+        _file_path: &Path,
         file_content: Vec<u8>,
         metadata: &Metadata<Self::Metadata>,
         _gfx_bridge: &dyn PipelineGfxBridge,

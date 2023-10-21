@@ -73,31 +73,31 @@ pub fn process_asset(
         AssetType::Font => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = FontSource::process(file_content, &metadata, gfx_bridge)?;
+            let asset = FontSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Material => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = MaterialSource::process(file_content, &metadata, gfx_bridge)?;
+            let asset = MaterialSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Model => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = ModelSource::process(file_content, &metadata, gfx_bridge)?;
+            let asset = ModelSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Shader => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = ShaderSource::process(file_content, &metadata, gfx_bridge)?;
+            let asset = ShaderSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Texture => {
             let metadata = Metadata::from_toml(metadata_content)?;
             let file_content = std::fs::read(path)?;
-            let asset = TextureSource::process(file_content, &metadata, gfx_bridge)?;
+            let asset = TextureSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
     }
@@ -126,6 +126,7 @@ pub fn deduce_asset_type_from_path(
         "ttf" | "otf" => Ok(AssetType::Font),
         "mat" => Ok(AssetType::Material),
         "gltf" | "glb" | "fbx" | "obj" | "3ds" | "blender" => Ok(AssetType::Model),
+        "pmx" => Ok(AssetType::Model),
         "png" | "jpg" | "jpeg" | "gif" | "tif" | "tiff" | "tga" | "bmp" | "webp" => {
             Ok(AssetType::Texture)
         }

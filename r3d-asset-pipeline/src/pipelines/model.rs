@@ -5,13 +5,19 @@ use asset::assets::{
     VertexAttributeKind, VertexIndexType,
 };
 use byteorder::ByteOrder;
+use pmx::Pmx;
 use russimp::{
     mesh::PrimitiveType,
     scene::{PostProcess, Scene},
     Color4D, Vector3D,
 };
 use serde::{Deserialize, Serialize};
-use std::mem::size_of;
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    mem::size_of,
+    path::Path,
+};
+use zerocopy::AsBytes;
 
 #[derive(Serialize, Deserialize)]
 pub struct MeshMetadata {
@@ -25,45 +31,242 @@ impl AssetPipeline for ModelSource {
     type Metadata = MeshMetadata;
 
     fn process(
+        file_path: &Path,
         file_content: Vec<u8>,
         _metadata: &Metadata<Self::Metadata>,
         _gfx_bridge: &dyn PipelineGfxBridge,
     ) -> anyhow::Result<Self> {
-        let scene = Scene::from_buffer(
-            &file_content,
-            vec![
-                PostProcess::JoinIdenticalVertices,
-                PostProcess::Triangulate,
-                PostProcess::SortByPrimitiveType,
-                PostProcess::SplitLargeMeshes,
-                PostProcess::GenerateNormals,
-                PostProcess::FixInfacingNormals,
-                PostProcess::CalculateTangentSpace,
-                PostProcess::GenerateUVCoords,
-                PostProcess::GenerateBoundingBoxes,
-                PostProcess::ImproveCacheLocality,
-                PostProcess::OptimizeGraph,
-                PostProcess::OptimizeMeshes,
-            ],
-            "",
-        )
-        .with_context(|| "failed to load mesh from file")
-        .map_err(|err| anyhow!(err))?;
-        let mut extractor = SceneExtractor::new();
-
-        let root_node_index = scene
-            .root
-            .as_ref()
-            .map(|root| extractor.extract_node(&scene, root, None));
-        let nodes = extractor.nodes;
-        let meshes = extractor.meshes;
-
-        Ok(Self {
-            root_node_index,
-            nodes,
-            meshes,
-        })
+        if file_path
+            .extension()
+            .map_or(false, |ext| ext.to_ascii_lowercase() == "pmx")
+        {
+            process_pmx_model(&file_content)
+        } else {
+            process_assimp_model(&file_content)
+        }
     }
+}
+
+fn process_pmx_model(content: &[u8]) -> anyhow::Result<ModelSource> {
+    let pmx = Pmx::parse(content).with_context(|| "failed to load mesh from file")?;
+
+    let mut material_offset = 0;
+    let mut meshes = Vec::with_capacity(pmx.materials.len());
+
+    for material_index in 0..pmx.materials.len() {
+        let material = &pmx.materials[material_index];
+        let surfaces = &pmx.surfaces[material_offset..material.surface_count as usize];
+        material_offset += material.surface_count as usize;
+
+        let aabb = if surfaces.len() == 0 {
+            MeshAABB {
+                min: [0f32; 3],
+                max: [0f32; 3],
+            }
+        } else {
+            let mut aabb = MeshAABB {
+                min: [f32::MAX; 3],
+                max: [f32::MIN; 3],
+            };
+
+            for surface in surfaces {
+                let vertex = &pmx.vertices[surface.vertex_indices[0].get() as usize];
+                aabb.min[0] = aabb.min[0].min(vertex.position.x);
+                aabb.min[1] = aabb.min[1].min(vertex.position.y);
+                aabb.min[2] = aabb.min[2].min(vertex.position.z);
+
+                aabb.max[0] = aabb.max[0].max(vertex.position.x);
+                aabb.max[1] = aabb.max[1].max(vertex.position.y);
+                aabb.max[2] = aabb.max[2].max(vertex.position.z);
+
+                let vertex = &pmx.vertices[surface.vertex_indices[1].get() as usize];
+                aabb.min[0] = aabb.min[0].min(vertex.position.x);
+                aabb.min[1] = aabb.min[1].min(vertex.position.y);
+                aabb.min[2] = aabb.min[2].min(vertex.position.z);
+
+                aabb.max[0] = aabb.max[0].max(vertex.position.x);
+                aabb.max[1] = aabb.max[1].max(vertex.position.y);
+                aabb.max[2] = aabb.max[2].max(vertex.position.z);
+
+                let vertex = &pmx.vertices[surface.vertex_indices[2].get() as usize];
+                aabb.min[0] = aabb.min[0].min(vertex.position.x);
+                aabb.min[1] = aabb.min[1].min(vertex.position.y);
+                aabb.min[2] = aabb.min[2].min(vertex.position.z);
+
+                aabb.max[0] = aabb.max[0].max(vertex.position.x);
+                aabb.max[1] = aabb.max[1].max(vertex.position.y);
+                aabb.max[2] = aabb.max[2].max(vertex.position.z);
+            }
+
+            aabb
+        };
+
+        let additional_vec4_count = pmx.header.config.additional_vec4_count;
+        let mut vertex_attributes = Vec::with_capacity(3 + additional_vec4_count);
+        vertex_attributes.push(VertexAttribute {
+            offset: 0,
+            kind: VertexAttributeKind::Position,
+        });
+        vertex_attributes.push(VertexAttribute {
+            offset: size_of::<[f32; 3]>() as u32,
+            kind: VertexAttributeKind::Normal,
+        });
+        vertex_attributes.push(VertexAttribute {
+            offset: size_of::<[f32; 6]>() as u32,
+            kind: VertexAttributeKind::TexCoord { index: 0 },
+        });
+
+        for index in 0..additional_vec4_count {
+            vertex_attributes.push(VertexAttribute {
+                offset: size_of::<[f32; 8]>() as u32 + (size_of::<[f32; 4]>() * index) as u32,
+                kind: VertexAttributeKind::Extra {
+                    index: index as u32,
+                },
+            });
+        }
+
+        let mut vertices = Vec::<u8>::with_capacity(
+            surfaces.len() * 3 * (8 + additional_vec4_count * 4) * size_of::<f32>(),
+        );
+        let mut indices = Vec::with_capacity(surfaces.len() * 3);
+        let mut index_map = HashMap::new();
+
+        for (surface_index, surface) in surfaces.iter().enumerate() {
+            for (surface_sub_index, vertex_index) in surface.vertex_indices.iter().enumerate() {
+                let index = match index_map.entry(surface_index * 3 + surface_sub_index) {
+                    Entry::Occupied(entry) => *entry.get(),
+                    Entry::Vacant(entry) => {
+                        let vertex = &pmx.vertices[vertex_index.get() as usize];
+
+                        vertices.extend_from_slice(
+                            &[vertex.position.x, vertex.position.y, vertex.position.z].as_bytes(),
+                        );
+                        vertices.extend_from_slice(
+                            &[vertex.normal.x, vertex.normal.y, vertex.normal.z].as_bytes(),
+                        );
+                        vertices.extend_from_slice(&[vertex.uv.x, vertex.uv.y].as_bytes());
+
+                        for index in 0..additional_vec4_count {
+                            let vec4 = &vertex.additional_vec4s[index];
+                            vertices
+                                .extend_from_slice(&[vec4.x, vec4.y, vec4.z, vec4.w].as_bytes());
+                        }
+
+                        let index = vertices.len() as u32;
+                        entry.insert(index);
+                        index
+                    }
+                };
+
+                indices.push(index);
+            }
+        }
+
+        // reduce vertex indices if possible
+        let (index_type, indices) = if index_map.is_empty() {
+            (VertexIndexType::U8, vec![])
+        } else {
+            let max = *index_map.values().max().unwrap();
+
+            if max <= u8::MAX as u32 {
+                let mut raw_indices = Vec::with_capacity(indices.len());
+
+                for index in indices {
+                    raw_indices.push(index as u8);
+                }
+
+                (VertexIndexType::U8, raw_indices)
+            } else if max <= u16::MAX as u32 {
+                let mut raw_indices = Vec::with_capacity(indices.len() * 2);
+
+                for index in indices {
+                    let index = index as u16;
+                    raw_indices.extend_from_slice(&index.to_le_bytes());
+                }
+
+                (VertexIndexType::U16, raw_indices)
+            } else {
+                let mut raw_indices = Vec::with_capacity(indices.len() * 4);
+
+                for index in indices {
+                    raw_indices.extend_from_slice(&index.to_le_bytes());
+                }
+
+                (VertexIndexType::U32, raw_indices)
+            }
+        };
+
+        meshes.push(MeshSource {
+            index: material_index as u32,
+            aabb,
+            index_type,
+            index_buffer: indices,
+            vertex_attributes,
+            vertex_buffer: vertices,
+            vertex_count: surfaces.len() as u32 * 3,
+            material: None,
+        });
+    }
+
+    // test: drop all bones and attach all meshes to root node
+    let nodes = vec![NodeSource {
+        index: 0,
+        parent_index: None,
+        children_indices: vec![],
+        name: "root".to_owned(),
+        transform: NodeTransform {
+            matrix: [
+                1.0, 0.0, 0.0, 0.0, //
+                0.0, 1.0, 0.0, 0.0, //
+                0.0, 0.0, 1.0, 0.0, //
+                0.0, 0.0, 0.0, 1.0, //
+            ],
+        },
+        mesh_indices: (0..meshes.len() as u32).collect(),
+    }];
+
+    Ok(ModelSource {
+        root_node_index: Some(0),
+        nodes,
+        meshes,
+    })
+}
+
+fn process_assimp_model(content: &[u8]) -> anyhow::Result<ModelSource> {
+    let scene = Scene::from_buffer(
+        &content,
+        vec![
+            PostProcess::JoinIdenticalVertices,
+            PostProcess::Triangulate,
+            PostProcess::SortByPrimitiveType,
+            PostProcess::SplitLargeMeshes,
+            PostProcess::GenerateNormals,
+            PostProcess::FixInfacingNormals,
+            PostProcess::CalculateTangentSpace,
+            PostProcess::GenerateUVCoords,
+            PostProcess::GenerateBoundingBoxes,
+            PostProcess::ImproveCacheLocality,
+            PostProcess::OptimizeGraph,
+            PostProcess::OptimizeMeshes,
+        ],
+        "",
+    )
+    .with_context(|| "failed to load mesh from file")
+    .map_err(|err| anyhow!(err))?;
+    let mut extractor = SceneExtractor::new();
+
+    let root_node_index = scene
+        .root
+        .as_ref()
+        .map(|root| extractor.extract_node(&scene, root, None));
+    let nodes = extractor.nodes;
+    let meshes = extractor.meshes;
+
+    Ok(ModelSource {
+        root_node_index,
+        nodes,
+        meshes,
+    })
 }
 
 #[derive(Default)]
@@ -223,6 +426,7 @@ fn convert_mesh(index: u32, mesh: &russimp::mesh::Mesh) -> MeshSource {
             ),
             VertexAttributeKind::Tangent => VertexDataCopySource::Vector3D(&mesh.tangents),
             VertexAttributeKind::Bitangent => VertexDataCopySource::Vector3D(&mesh.bitangents),
+            _ => unreachable!(),
         };
 
         for index in 0..mesh.vertices.len() {
@@ -292,6 +496,7 @@ fn convert_mesh(index: u32, mesh: &russimp::mesh::Mesh) -> MeshSource {
         vertex_attributes,
         vertex_buffer: raw_vertex_buffer,
         vertex_count: vertex_count as u32,
+        material: None,
     }
 }
 

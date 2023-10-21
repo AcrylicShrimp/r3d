@@ -17,12 +17,20 @@ pub enum VertexIndexType {
 /// Type of a vertex attribute.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VertexAttributeKind {
+    /// vec3
     Position,
+    /// vec3
     Normal,
+    /// vec4
     Color { index: u32 },
+    /// vec2
     TexCoord { index: u32 },
+    /// vec3
     Tangent,
+    /// vec3
     Bitangent,
+    /// vec4
+    Extra { index: u32 },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -64,7 +72,12 @@ pub struct Mesh {
     pub vertex_attributes: Vec<VertexAttribute>,
     pub vertex_buffer: GfxBuffer,
     pub vertex_count: u32,
-    // TODO: Should we add a (mesh) material here?
+    pub material: Option<MeshMaterial>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MeshMaterial {
+    // TODO: Add more fields.
 }
 
 /// Represents a mesy asset.
@@ -85,9 +98,10 @@ pub struct MeshSource {
     /// Little-endian.
     pub vertex_buffer: Vec<u8>,
     pub vertex_count: u32,
-    // TODO: Should we add a (mesh) material here?
+    pub material: Option<MeshMaterialSource>,
 }
 
+pub type MeshMaterialSource = MeshMaterial;
 pub type NodeSource = Node;
 
 #[derive(Serialize, Deserialize)]
@@ -127,6 +141,7 @@ impl AssetSource for ModelSource {
                     vertex_buffer: gfx_bridge
                         .upload_vertex_buffer(BufferUsages::VERTEX, &mesh.vertex_buffer),
                     vertex_count: mesh.vertex_count,
+                    material: mesh.material,
                 })
                 .collect(),
         }))
