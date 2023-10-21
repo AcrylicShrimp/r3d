@@ -1,5 +1,4 @@
 use codegen::HandleMut;
-use half::f16;
 use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 use wgpu::{
     BindGroup, BindGroupDescriptor, BindGroupEntry, BindingResource, BindingType, Buffer,
@@ -417,8 +416,6 @@ pub enum PerInstancePropertyValue {
     Unorm16x4([u16; 4]),
     Snorm16x2([i16; 2]),
     Snorm16x4([i16; 4]),
-    Float16x2([f16; 2]),
-    Float16x4([f16; 4]),
     Float32([f32; 1]),
     Float32x2([f32; 2]),
     Float32x3([f32; 3]),
@@ -456,8 +453,6 @@ impl PerInstancePropertyValue {
             PerInstancePropertyValue::Unorm16x4(inner) => inner.as_bytes(),
             PerInstancePropertyValue::Snorm16x2(inner) => inner.as_bytes(),
             PerInstancePropertyValue::Snorm16x4(inner) => inner.as_bytes(),
-            PerInstancePropertyValue::Float16x2(inner) => inner.as_bytes(),
-            PerInstancePropertyValue::Float16x4(inner) => inner.as_bytes(),
             PerInstancePropertyValue::Float32(inner) => inner.as_bytes(),
             PerInstancePropertyValue::Float32x2(inner) => inner.as_bytes(),
             PerInstancePropertyValue::Float32x3(inner) => inner.as_bytes(),
@@ -495,8 +490,6 @@ impl PerInstancePropertyValue {
             Self::Unorm16x4(_) => VertexFormat::Unorm16x4,
             Self::Snorm16x2(_) => VertexFormat::Snorm16x2,
             Self::Snorm16x4(_) => VertexFormat::Snorm16x4,
-            Self::Float16x2(_) => VertexFormat::Float16x2,
-            Self::Float16x4(_) => VertexFormat::Float16x4,
             Self::Float32(_) => VertexFormat::Float32,
             Self::Float32x2(_) => VertexFormat::Float32x2,
             Self::Float32x3(_) => VertexFormat::Float32x3,
