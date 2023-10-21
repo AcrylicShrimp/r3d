@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 bincode = { version = "1" }
 fontdue = { version = "0.7" }
-half = { version = "2", features = ["num-traits", "serde", "zerocopy"] }
 image = { version = "0.24" }
 russimp = { version = "2", features = ["prebuilt", "static-link"] }
 serde = { version = "1", features = ["derive"] }

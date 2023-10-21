@@ -3,7 +3,6 @@ use crate::{
     Asset, AssetDepsProvider, AssetLoadError, AssetSource, AssetType, GfxBridge, GfxBuffer,
     GfxSampler, GfxTextureView, TypedAsset,
 };
-use half::f16;
 use serde::{Deserialize, Serialize};
 use std::{io::Write, sync::Arc};
 use uuid::Uuid;
@@ -64,8 +63,6 @@ pub enum MaterialInstancePropValue {
     Unorm16x4([u16; 4]),
     Snorm16x2([i16; 2]),
     Snorm16x4([i16; 4]),
-    Float16x2([f16; 2]),
-    Float16x4([f16; 4]),
     Float32([f32; 1]),
     Float32x2([f32; 2]),
     Float32x3([f32; 3]),
@@ -125,8 +122,6 @@ pub enum MaterialBindingValueSource {
     Unorm16x4([u16; 4]),
     Snorm16x2([i16; 2]),
     Snorm16x4([i16; 4]),
-    Float16x2([f16; 2]),
-    Float16x4([f16; 4]),
     Float32([f32; 1]),
     Float32x2([f32; 2]),
     Float32x3([f32; 3]),
@@ -248,8 +243,6 @@ impl AssetSource for MaterialSource {
                 MaterialBindingValueSource::Unorm16x4(value) => value.as_bytes(),
                 MaterialBindingValueSource::Snorm16x2(value) => value.as_bytes(),
                 MaterialBindingValueSource::Snorm16x4(value) => value.as_bytes(),
-                MaterialBindingValueSource::Float16x2(value) => value.as_bytes(),
-                MaterialBindingValueSource::Float16x4(value) => value.as_bytes(),
                 MaterialBindingValueSource::Float32(value) => value.as_bytes(),
                 MaterialBindingValueSource::Float32x2(value) => value.as_bytes(),
                 MaterialBindingValueSource::Float32x3(value) => value.as_bytes(),
