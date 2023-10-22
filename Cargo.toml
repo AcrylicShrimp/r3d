@@ -43,3 +43,6 @@ members = [
   "./r3d-logging",
   "./r3d-pmx",
 ]
+
+[profile.release]
+lto = true
