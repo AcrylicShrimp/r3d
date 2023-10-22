@@ -65,37 +65,52 @@ pub enum AssetProcessError {
 pub fn process_asset(
     path: impl AsRef<Path>,
     asset_type: AssetType,
-    metadata_content: impl AsRef<str>,
+    metadata_content: Option<impl AsRef<str>>,
     gfx_bridge: &dyn PipelineGfxBridge,
 ) -> Result<TypedAssetSource, AssetProcessError> {
     let path = path.as_ref();
     match asset_type {
         AssetType::Font => {
-            let metadata = Metadata::from_toml(metadata_content)?;
+            let metadata = metadata_content
+                .map(|content| Metadata::from_toml(content))
+                .transpose()?;
+            let metadata = metadata.map(|metadata| metadata.extra).unwrap_or_default();
             let file_content = std::fs::read(path)?;
             let asset = FontSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Material => {
-            let metadata = Metadata::from_toml(metadata_content)?;
+            let metadata = metadata_content
+                .map(|content| Metadata::from_toml(content))
+                .transpose()?;
+            let metadata = metadata.map(|metadata| metadata.extra).unwrap_or_default();
             let file_content = std::fs::read(path)?;
             let asset = MaterialSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Model => {
-            let metadata = Metadata::from_toml(metadata_content)?;
+            let metadata = metadata_content
+                .map(|content| Metadata::from_toml(content))
+                .transpose()?;
+            let metadata = metadata.map(|metadata| metadata.extra).unwrap_or_default();
             let file_content = std::fs::read(path)?;
             let asset = ModelSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Shader => {
-            let metadata = Metadata::from_toml(metadata_content)?;
+            let metadata = metadata_content
+                .map(|content| Metadata::from_toml(content))
+                .transpose()?;
+            let metadata = metadata.map(|metadata| metadata.extra).unwrap_or_default();
             let file_content = std::fs::read(path)?;
             let asset = ShaderSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())
         }
         AssetType::Texture => {
-            let metadata = Metadata::from_toml(metadata_content)?;
+            let metadata = metadata_content
+                .map(|content| Metadata::from_toml(content))
+                .transpose()?;
+            let metadata = metadata.map(|metadata| metadata.extra).unwrap_or_default();
             let file_content = std::fs::read(path)?;
             let asset = TextureSource::process(path, file_content, &metadata, gfx_bridge)?;
             Ok(asset.into())

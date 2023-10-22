@@ -1,6 +1,5 @@
 use crate::AssetDatabase;
-use asset::TypedAsset;
-use asset_pipeline::AssetProcessError;
+use asset::{AssetKey, TypedAsset};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -8,8 +7,10 @@ use uuid::Uuid;
 pub enum AssetLoadError {
     #[error("asset not found: {0}")]
     AssetNotFound(Uuid),
+    #[error("failed to deduce asset type: {0}")]
+    AssetTypeDeduceError(#[from] asset_pipeline::AssetTypeDeduceError),
     #[error("failed to process asset: {0}")]
-    ProcessError(#[from] AssetProcessError),
+    ProcessError(#[from] asset_pipeline::AssetProcessError),
     #[error("failed to load asset: {0}")]
     LoadError(#[from] asset::AssetLoadError),
     #[error("io error: {0}")]
@@ -17,5 +18,9 @@ pub enum AssetLoadError {
 }
 
 pub trait AssetLoader {
-    fn load_asset(&self, id: Uuid, database: &AssetDatabase) -> Result<TypedAsset, AssetLoadError>;
+    fn load_asset(
+        &self,
+        key: &AssetKey,
+        database: &AssetDatabase,
+    ) -> Result<TypedAsset, AssetLoadError>;
 }

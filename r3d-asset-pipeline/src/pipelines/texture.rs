@@ -1,4 +1,4 @@
-use crate::{AssetPipeline, Metadata, PipelineGfxBridge};
+use crate::{AssetPipeline, PipelineGfxBridge};
 use asset::assets::{
     NinePatchSource, NinePatchTexelRange, SpriteSource, SpriteTexelRange, TextureAddressMode,
     TextureFilterMode, TextureFormat, TextureSource,
@@ -12,6 +12,22 @@ pub struct TextureMetadata {
     pub texture: TextureTable,
     pub sprite: HashMap<String, SpriteTable>,
     pub nine_patch: HashMap<String, NinePatchTable>,
+}
+
+impl Default for TextureMetadata {
+    fn default() -> Self {
+        Self {
+            texture: TextureTable {
+                is_srgb: false,
+                has_alpha: true,
+                filter_mode: TextureTableFilterMode::Trilinear,
+                address_mode_u: TextureTableAddressMode::Clamp,
+                address_mode_v: TextureTableAddressMode::Clamp,
+            },
+            sprite: HashMap::new(),
+            nine_patch: HashMap::new(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -89,7 +105,7 @@ impl AssetPipeline for TextureSource {
     fn process(
         _file_path: &Path,
         file_content: Vec<u8>,
-        metadata: &Metadata<Self::Metadata>,
+        metadata: &Self::Metadata,
         _gfx_bridge: &dyn PipelineGfxBridge,
     ) -> anyhow::Result<Self> {
         let image = ImageReader::new(Cursor::new(file_content))
@@ -97,14 +113,14 @@ impl AssetPipeline for TextureSource {
             .decode()?;
         let width = image.width() as u16;
         let height = image.height() as u16;
-        let texels = if metadata.extra.texture.has_alpha {
+        let texels = if metadata.texture.has_alpha {
             let mut image = {
                 let rgba = image.to_rgba8();
                 drop(image);
                 rgba
             };
 
-            if metadata.extra.texture.is_srgb {
+            if metadata.texture.is_srgb {
                 for pixel in image.pixels_mut() {
                     let (r, g, b) = srgb_to_linear(pixel[0], pixel[1], pixel[2]);
                     pixel[0] = r;
@@ -121,7 +137,7 @@ impl AssetPipeline for TextureSource {
                 rgb
             };
 
-            if metadata.extra.texture.is_srgb {
+            if metadata.texture.is_srgb {
                 for pixel in image.pixels_mut() {
                     let (r, g, b) = srgb_to_linear(pixel[0], pixel[1], pixel[2]);
                     pixel[0] = r;
@@ -132,18 +148,18 @@ impl AssetPipeline for TextureSource {
 
             image.into_raw()
         };
-        let format = if metadata.extra.texture.has_alpha {
+        let format = if metadata.texture.has_alpha {
             TextureFormat::RGBA8
         } else {
             TextureFormat::RGB8
         };
-        let filter_mode = metadata.extra.texture.filter_mode.into();
+        let filter_mode = metadata.texture.filter_mode.into();
         let address_mode = (
-            metadata.extra.texture.address_mode_u.into(),
-            metadata.extra.texture.address_mode_v.into(),
+            metadata.texture.address_mode_u.into(),
+            metadata.texture.address_mode_v.into(),
         );
 
-        let sprites = Vec::from_iter(metadata.extra.sprite.iter().map(|(name, sprite)| {
+        let sprites = Vec::from_iter(metadata.sprite.iter().map(|(name, sprite)| {
             SpriteSource {
                 name: name.clone(),
                 filter_mode: sprite
@@ -172,40 +188,39 @@ impl AssetPipeline for TextureSource {
                 ),
             }
         }));
-        let nine_patches =
-            Vec::from_iter(metadata.extra.nine_patch.iter().map(|(name, nine_patch)| {
-                NinePatchSource {
-                    name: name.clone(),
-                    filter_mode: nine_patch
-                        .filter_mode
+        let nine_patches = Vec::from_iter(metadata.nine_patch.iter().map(|(name, nine_patch)| {
+            NinePatchSource {
+                name: name.clone(),
+                filter_mode: nine_patch
+                    .filter_mode
+                    .map(|mode| mode.into())
+                    .unwrap_or(filter_mode),
+                address_mode: (
+                    nine_patch
+                        .address_mode_u
                         .map(|mode| mode.into())
-                        .unwrap_or(filter_mode),
-                    address_mode: (
-                        nine_patch
-                            .address_mode_u
-                            .map(|mode| mode.into())
-                            .unwrap_or(address_mode.0),
-                        nine_patch
-                            .address_mode_v
-                            .map(|mode| mode.into())
-                            .unwrap_or(address_mode.1),
-                    ),
-                    texel_mapping: (
-                        NinePatchTexelRange {
-                            min: nine_patch.x_min,
-                            mid_min: nine_patch.x_mid_min,
-                            mid_max: nine_patch.x_mid_max,
-                            max: nine_patch.x_max,
-                        },
-                        NinePatchTexelRange {
-                            min: nine_patch.y_min,
-                            mid_min: nine_patch.y_mid_min,
-                            mid_max: nine_patch.y_mid_max,
-                            max: nine_patch.y_max,
-                        },
-                    ),
-                }
-            }));
+                        .unwrap_or(address_mode.0),
+                    nine_patch
+                        .address_mode_v
+                        .map(|mode| mode.into())
+                        .unwrap_or(address_mode.1),
+                ),
+                texel_mapping: (
+                    NinePatchTexelRange {
+                        min: nine_patch.x_min,
+                        mid_min: nine_patch.x_mid_min,
+                        mid_max: nine_patch.x_mid_max,
+                        max: nine_patch.x_max,
+                    },
+                    NinePatchTexelRange {
+                        min: nine_patch.y_min,
+                        mid_min: nine_patch.y_mid_min,
+                        mid_max: nine_patch.y_mid_max,
+                        max: nine_patch.y_max,
+                    },
+                ),
+            }
+        }));
 
         Ok(Self {
             width,

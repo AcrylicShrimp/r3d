@@ -1,6 +1,8 @@
-use crate::assets::{Font, Material, Model, Shader, Texture};
+use crate::{
+    assets::{Font, Material, Model, Shader, Texture},
+    AssetKey,
+};
 use std::{fmt::Display, sync::Arc};
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssetType {
@@ -100,6 +102,6 @@ impl TypedAsset {
 }
 
 pub trait Asset {
-    fn id(&self) -> Uuid;
+    fn key(&self) -> &AssetKey;
     fn as_typed(self: Arc<Self>) -> TypedAsset;
 }

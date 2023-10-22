@@ -10,7 +10,10 @@ pub enum MetadataLoadError {
 
 /// Metadata for an asset.
 #[derive(Serialize, Deserialize)]
-pub struct Metadata<T> {
+pub struct Metadata<T>
+where
+    T: Default,
+{
     pub asset: AssetMetadata,
     #[serde(flatten)]
     pub extra: T,
@@ -24,7 +27,7 @@ pub struct AssetMetadata {
 
 impl<T> Metadata<T>
 where
-    T: for<'de> Deserialize<'de>,
+    T: for<'de> Deserialize<'de> + Default,
 {
     pub fn from_toml(content: impl AsRef<str>) -> Result<Self, MetadataLoadError> {
         toml::from_str(content.as_ref()).map_err(MetadataLoadError::from)

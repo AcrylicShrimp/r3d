@@ -1,11 +1,10 @@
 use super::{SemanticShaderBindingKey, Shader};
 use crate::{
-    Asset, AssetDepsProvider, AssetLoadError, AssetSource, AssetType, GfxBridge, GfxBuffer,
-    GfxSampler, GfxTextureView, TypedAsset,
+    Asset, AssetDepsProvider, AssetKey, AssetLoadError, AssetSource, AssetType, GfxBridge,
+    GfxBuffer, GfxSampler, GfxTextureView, TypedAsset,
 };
 use serde::{Deserialize, Serialize};
 use std::{io::Write, sync::Arc};
-use uuid::Uuid;
 use wgpu::{BufferAddress, BufferSize, BufferUsages};
 use zerocopy::AsBytes;
 
@@ -138,11 +137,23 @@ pub enum MaterialBindingValueSource {
     Float64x2([f64; 2]),
     Float64x3([f64; 3]),
     Float64x4([f64; 4]),
-    TextureView { texture: Uuid },
-    TextureViewArray { textures: Vec<Uuid> },
-    SamplerTexture { texture: Uuid },
-    SamplerSprite { texture: Uuid, sprite: String },
-    SamplerNinePatch { texture: Uuid, nine_patch: String },
+    TextureView {
+        texture: AssetKey,
+    },
+    TextureViewArray {
+        textures: Vec<AssetKey>,
+    },
+    SamplerTexture {
+        texture: AssetKey,
+    },
+    SamplerSprite {
+        texture: AssetKey,
+        sprite: String,
+    },
+    SamplerNinePatch {
+        texture: AssetKey,
+        nine_patch: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -155,7 +166,7 @@ pub type MaterialInstancePropSource = MaterialInstanceProp;
 
 #[derive(Serialize, Deserialize)]
 pub struct MaterialSource {
-    pub shader: Uuid,
+    pub shader: AssetKey,
     pub binding_props: Vec<MaterialBindingPropSource>,
     pub instance_props: Vec<MaterialInstancePropSource>,
 }
@@ -173,26 +184,26 @@ impl MaterialSource {
 impl AssetSource for MaterialSource {
     type Asset = dyn MaterialAsset;
 
-    fn dependencies(&self) -> Vec<Uuid> {
+    fn dependencies(&self) -> Vec<AssetKey> {
         let mut deps = Vec::with_capacity(1 + self.binding_props.len());
-        deps.push(self.shader);
+        deps.push(self.shader.clone());
 
         for prop in &self.binding_props {
             match &prop.value {
                 MaterialBindingValueSource::TextureView { texture } => {
-                    deps.push(*texture);
+                    deps.push(texture.clone());
                 }
                 MaterialBindingValueSource::TextureViewArray { textures } => {
                     deps.extend(textures.iter().cloned());
                 }
                 MaterialBindingValueSource::SamplerTexture { texture } => {
-                    deps.push(*texture);
+                    deps.push(texture.clone());
                 }
                 MaterialBindingValueSource::SamplerSprite { texture, .. } => {
-                    deps.push(*texture);
+                    deps.push(texture.clone());
                 }
                 MaterialBindingValueSource::SamplerNinePatch { texture, .. } => {
-                    deps.push(*texture);
+                    deps.push(texture.clone());
                 }
                 _ => {}
             }
@@ -203,20 +214,20 @@ impl AssetSource for MaterialSource {
 
     fn load(
         self,
-        id: Uuid,
+        key: AssetKey,
         deps_provider: &dyn AssetDepsProvider,
         gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError> {
-        let shader = deps_provider.find_dependency(self.shader).ok_or_else(|| {
+        let shader = deps_provider.find_dependency(&self.shader).ok_or_else(|| {
             AssetLoadError::MissingDependency {
-                expected_id: self.shader,
+                expected_key: self.shader.clone(),
                 expected_ty: AssetType::Shader,
             }
         })?;
         let shader = shader
             .as_shader()
             .ok_or_else(|| AssetLoadError::DependencyTypeMismatch {
-                expected_id: self.shader,
+                expected_key: self.shader.clone(),
                 expected_ty: AssetType::Shader,
                 actual_ty: shader.ty(),
             })?;
@@ -292,19 +303,19 @@ impl AssetSource for MaterialSource {
 
         let binding_props = self
             .binding_props
-            .iter()
+            .into_iter()
             .map(|prop| {
-                let value = match &prop.value {
-                    MaterialBindingValueSource::TextureView { texture: uuid } => {
-                        let texture = deps_provider.find_dependency(*uuid).ok_or_else(|| {
+                let value = match prop.value {
+                    MaterialBindingValueSource::TextureView { texture: key } => {
+                        let texture = deps_provider.find_dependency(&key).ok_or_else(|| {
                             AssetLoadError::MissingDependency {
-                                expected_id: *uuid,
+                                expected_key: key.clone(),
                                 expected_ty: AssetType::Texture,
                             }
                         })?;
                         let texture = texture.as_texture().ok_or_else(|| {
                             AssetLoadError::DependencyTypeMismatch {
-                                expected_id: *uuid,
+                                expected_key: key.clone(),
                                 expected_ty: AssetType::Texture,
                                 actual_ty: texture.ty(),
                             }
@@ -315,18 +326,18 @@ impl AssetSource for MaterialSource {
                     }
                     MaterialBindingValueSource::TextureViewArray { textures } => {
                         let views = textures
-                            .iter()
-                            .map(|uuid| {
+                            .into_iter()
+                            .map(|key| {
                                 let texture =
-                                    deps_provider.find_dependency(*uuid).ok_or_else(|| {
+                                    deps_provider.find_dependency(&key).ok_or_else(|| {
                                         AssetLoadError::MissingDependency {
-                                            expected_id: *uuid,
+                                            expected_key: key.clone(),
                                             expected_ty: AssetType::Texture,
                                         }
                                     })?;
                                 let texture = texture.as_texture().ok_or_else(|| {
                                     AssetLoadError::DependencyTypeMismatch {
-                                        expected_id: *uuid,
+                                        expected_key: key.clone(),
                                         expected_ty: AssetType::Texture,
                                         actual_ty: texture.ty(),
                                     }
@@ -336,16 +347,16 @@ impl AssetSource for MaterialSource {
                             .collect::<Result<Vec<_>, AssetLoadError>>()?;
                         MaterialBindingValue::TextureViewArray { views }
                     }
-                    MaterialBindingValueSource::SamplerTexture { texture: uuid } => {
-                        let texture = deps_provider.find_dependency(*uuid).ok_or_else(|| {
+                    MaterialBindingValueSource::SamplerTexture { texture: key } => {
+                        let texture = deps_provider.find_dependency(&key).ok_or_else(|| {
                             AssetLoadError::MissingDependency {
-                                expected_id: *uuid,
+                                expected_key: key.clone(),
                                 expected_ty: AssetType::Texture,
                             }
                         })?;
                         let texture = texture.as_texture().ok_or_else(|| {
                             AssetLoadError::DependencyTypeMismatch {
-                                expected_id: *uuid,
+                                expected_key: key.clone(),
                                 expected_ty: AssetType::Texture,
                                 actual_ty: texture.ty(),
                             }
@@ -355,18 +366,18 @@ impl AssetSource for MaterialSource {
                         }
                     }
                     MaterialBindingValueSource::SamplerSprite {
-                        texture: uuid,
+                        texture: key,
                         sprite,
                     } => {
-                        let texture = deps_provider.find_dependency(*uuid).ok_or_else(|| {
+                        let texture = deps_provider.find_dependency(&key).ok_or_else(|| {
                             AssetLoadError::MissingDependency {
-                                expected_id: *uuid,
+                                expected_key: key.clone(),
                                 expected_ty: AssetType::Texture,
                             }
                         })?;
                         let texture = texture.as_texture().ok_or_else(|| {
                             AssetLoadError::DependencyTypeMismatch {
-                                expected_id: *uuid,
+                                expected_key: key.clone(),
                                 expected_ty: AssetType::Texture,
                                 actual_ty: texture.ty(),
                             }
@@ -376,7 +387,7 @@ impl AssetSource for MaterialSource {
                             .iter()
                             .position(|item| item.name.as_str() == sprite.as_str())
                             .ok_or_else(|| AssetLoadError::InvalidSpriteName {
-                                texture_id: *uuid,
+                                texture_key: key,
                                 sprite_name: sprite.clone(),
                             })?;
                         MaterialBindingValue::Sampler {
@@ -384,18 +395,18 @@ impl AssetSource for MaterialSource {
                         }
                     }
                     MaterialBindingValueSource::SamplerNinePatch {
-                        texture: uuid,
+                        texture: key,
                         nine_patch,
                     } => {
-                        let texture = deps_provider.find_dependency(*uuid).ok_or_else(|| {
+                        let texture = deps_provider.find_dependency(&key).ok_or_else(|| {
                             AssetLoadError::MissingDependency {
-                                expected_id: *uuid,
+                                expected_key: key.clone(),
                                 expected_ty: AssetType::Texture,
                             }
                         })?;
                         let texture = texture.as_texture().ok_or_else(|| {
                             AssetLoadError::DependencyTypeMismatch {
-                                expected_id: *uuid,
+                                expected_key: key.clone(),
                                 expected_ty: AssetType::Texture,
                                 actual_ty: texture.ty(),
                             }
@@ -405,7 +416,7 @@ impl AssetSource for MaterialSource {
                             .iter()
                             .position(|item| item.name.as_str() == nine_patch.as_str())
                             .ok_or_else(|| AssetLoadError::InvalidNinePatchName {
-                                texture_id: *uuid,
+                                texture_key: key.clone(),
                                 nine_patch_name: nine_patch.clone(),
                             })?;
                         MaterialBindingValue::Sampler {
@@ -432,7 +443,7 @@ impl AssetSource for MaterialSource {
         let instance_props = self.instance_props.clone();
 
         Ok(Arc::new(Material {
-            id,
+            key,
             preset: MaterialPreset {
                 shader: shader.clone(),
                 binding_props,
@@ -443,13 +454,13 @@ impl AssetSource for MaterialSource {
 }
 
 struct Material {
-    id: Uuid,
+    key: AssetKey,
     preset: MaterialPreset,
 }
 
 impl Asset for Material {
-    fn id(&self) -> Uuid {
-        self.id
+    fn key(&self) -> &AssetKey {
+        &self.key
     }
 
     fn as_typed(self: Arc<Self>) -> TypedAsset {

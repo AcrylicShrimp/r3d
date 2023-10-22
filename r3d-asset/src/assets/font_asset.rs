@@ -1,4 +1,6 @@
-use crate::{Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, TypedAsset};
+use crate::{
+    Asset, AssetDepsProvider, AssetKey, AssetLoadError, AssetSource, GfxBridge, TypedAsset,
+};
 use fontdue::{Font as FontDueFont, Metrics as FontDueMetrics};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -6,7 +8,6 @@ use std::{
     num::NonZeroU16,
     sync::Arc,
 };
-use uuid::Uuid;
 
 /// Represents a single glyph to be identified. It is safe to share across all fonts.
 #[derive(Debug, Clone, Copy)]
@@ -81,18 +82,18 @@ pub struct FontSource {
 impl AssetSource for FontSource {
     type Asset = dyn FontAsset;
 
-    fn dependencies(&self) -> Vec<Uuid> {
+    fn dependencies(&self) -> Vec<AssetKey> {
         vec![]
     }
 
     fn load(
         self,
-        id: Uuid,
+        key: AssetKey,
         _deps_provider: &dyn AssetDepsProvider,
         _gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError> {
         Ok(Arc::new(Font {
-            id,
+            key,
             font: FontDueFont::from_bytes(self.font_file.as_ref(), Default::default())
                 .map_err(|err| AssetLoadError::Other(err.to_owned()))?,
             sdf_font_size: self.sdf_font_size,
@@ -104,7 +105,7 @@ impl AssetSource for FontSource {
 }
 
 struct Font {
-    id: Uuid,
+    key: AssetKey,
     font: FontDueFont,
     sdf_font_size: f32,
     sdf_inset: u32,
@@ -113,8 +114,8 @@ struct Font {
 }
 
 impl Asset for Font {
-    fn id(&self) -> Uuid {
-        self.id
+    fn key(&self) -> &AssetKey {
+        &self.key
     }
 
     fn as_typed(self: Arc<Self>) -> TypedAsset {

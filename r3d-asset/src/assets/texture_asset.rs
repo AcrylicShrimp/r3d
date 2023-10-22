@@ -1,10 +1,9 @@
 use crate::{
-    Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, GfxSampler, GfxTexture,
-    GfxTextureView, TypedAsset,
+    Asset, AssetDepsProvider, AssetKey, AssetLoadError, AssetSource, GfxBridge, GfxSampler,
+    GfxTexture, GfxTextureView, TypedAsset,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextureFormat {
@@ -114,13 +113,13 @@ pub struct TextureSource {
 impl AssetSource for TextureSource {
     type Asset = dyn TextureAsset;
 
-    fn dependencies(&self) -> Vec<Uuid> {
+    fn dependencies(&self) -> Vec<AssetKey> {
         vec![]
     }
 
     fn load(
         self,
-        id: Uuid,
+        key: AssetKey,
         _deps_provider: &dyn AssetDepsProvider,
         gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError> {
@@ -135,7 +134,7 @@ impl AssetSource for TextureSource {
         let sampler_handle = gfx_bridge.create_sampler(self.filter_mode, self.address_mode);
 
         Ok(Arc::new(Texture {
-            id,
+            key,
             handle,
             view_handle,
             sampler_handle,
@@ -173,7 +172,7 @@ impl AssetSource for TextureSource {
 }
 
 struct Texture {
-    id: Uuid,
+    key: AssetKey,
     handle: GfxTexture,
     view_handle: GfxTextureView,
     sampler_handle: GfxSampler,
@@ -187,8 +186,8 @@ struct Texture {
 }
 
 impl Asset for Texture {
-    fn id(&self) -> Uuid {
-        self.id
+    fn key(&self) -> &AssetKey {
+        &self.key
     }
 
     fn as_typed(self: Arc<Self>) -> TypedAsset {

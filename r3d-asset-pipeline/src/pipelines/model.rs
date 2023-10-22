@@ -1,4 +1,4 @@
-use crate::{AssetPipeline, Metadata, PipelineGfxBridge};
+use crate::{AssetPipeline, PipelineGfxBridge};
 use anyhow::{anyhow, Context};
 use asset::assets::{
     MeshAABB, MeshSource, ModelSource, NodeSource, NodeTransform, VertexAttribute,
@@ -19,12 +19,12 @@ use std::{
 };
 use zerocopy::AsBytes;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct MeshMetadata {
     pub mesh: MeshTable,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct MeshTable {}
 
 impl AssetPipeline for ModelSource {
@@ -33,7 +33,7 @@ impl AssetPipeline for ModelSource {
     fn process(
         file_path: &Path,
         file_content: Vec<u8>,
-        _metadata: &Metadata<Self::Metadata>,
+        _metadata: &Self::Metadata,
         _gfx_bridge: &dyn PipelineGfxBridge,
     ) -> anyhow::Result<Self> {
         if file_path

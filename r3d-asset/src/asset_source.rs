@@ -1,34 +1,35 @@
-use crate::{Asset, AssetDepsProvider, AssetType, GfxBridge};
+use crate::{Asset, AssetDepsProvider, AssetKey, AssetType, GfxBridge};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
-use uuid::Uuid;
 
 #[derive(Error, Debug)]
 pub enum AssetLoadError {
     #[error("io error: {0}")]
     IOError(#[from] std::io::Error),
-    #[error("missing dependency: `{expected_id}` of type `{expected_ty}`")]
+    #[error("missing dependency: `{expected_key}` of type `{expected_ty}`")]
     MissingDependency {
-        expected_id: Uuid,
+        expected_key: AssetKey,
         expected_ty: AssetType,
     },
-    #[error("dependency type mismatch: `{expected_id}` of type `{expected_ty}`, but found `{actual_ty}`")]
+    #[error("dependency type mismatch: `{expected_key}` of type `{expected_ty}`, but found `{actual_ty}`")]
     DependencyTypeMismatch {
-        expected_id: Uuid,
+        expected_key: AssetKey,
         expected_ty: AssetType,
         actual_ty: AssetType,
     },
-    #[error("invalid sprite name: texture `{texture_id}` does not contain sprite `{sprite_name}`")]
+    #[error(
+        "invalid sprite name: texture `{texture_key}` does not contain sprite `{sprite_name}`"
+    )]
     InvalidSpriteName {
-        texture_id: Uuid,
+        texture_key: AssetKey,
         sprite_name: String,
     },
     #[error(
-        "invalid nine-patch name: texture `{texture_id}` does not contain nine-patch `{nine_patch_name}`"
+        "invalid nine-patch name: texture `{texture_key}` does not contain nine-patch `{nine_patch_name}`"
     )]
     InvalidNinePatchName {
-        texture_id: Uuid,
+        texture_key: AssetKey,
         nine_patch_name: String,
     },
     #[error("{0}")]
@@ -41,12 +42,12 @@ pub trait AssetSource: Serialize + for<'de> Deserialize<'de> {
     type Asset: ?Sized + Asset;
 
     /// List all dependencies of the asset.
-    fn dependencies(&self) -> Vec<Uuid>;
+    fn dependencies(&self) -> Vec<AssetKey>;
 
     /// Constructs an asset from the source. The given id is the id of the asset.
     fn load(
         self,
-        id: Uuid,
+        key: AssetKey,
         deps_provider: &dyn AssetDepsProvider,
         gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError>;

@@ -1,9 +1,9 @@
 use crate::{
-    Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, GfxBuffer, TypedAsset,
+    Asset, AssetDepsProvider, AssetKey, AssetLoadError, AssetSource, GfxBridge, GfxBuffer,
+    TypedAsset,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use uuid::Uuid;
 use wgpu::BufferUsages;
 
 /// Index element type of a mesh.
@@ -114,18 +114,18 @@ pub struct ModelSource {
 impl AssetSource for ModelSource {
     type Asset = dyn ModelAsset;
 
-    fn dependencies(&self) -> Vec<Uuid> {
+    fn dependencies(&self) -> Vec<AssetKey> {
         vec![]
     }
 
     fn load(
         self,
-        id: Uuid,
+        key: AssetKey,
         _deps_provider: &dyn AssetDepsProvider,
         gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError> {
         Ok(Arc::new(Model {
-            id,
+            key,
             root_node_index: self.root_node_index,
             nodes: self.nodes,
             meshes: self
@@ -149,15 +149,15 @@ impl AssetSource for ModelSource {
 }
 
 struct Model {
-    id: Uuid,
+    key: AssetKey,
     root_node_index: Option<u32>,
     nodes: Vec<Node>,
     meshes: Vec<Mesh>,
 }
 
 impl Asset for Model {
-    fn id(&self) -> Uuid {
-        self.id
+    fn key(&self) -> &AssetKey {
+        &self.key
     }
 
     fn as_typed(self: Arc<Self>) -> TypedAsset {

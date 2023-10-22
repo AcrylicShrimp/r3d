@@ -1,5 +1,6 @@
 use crate::{
-    Asset, AssetDepsProvider, AssetLoadError, AssetSource, GfxBridge, GfxShaderModule, TypedAsset,
+    Asset, AssetDepsProvider, AssetKey, AssetLoadError, AssetSource, GfxBridge, GfxShaderModule,
+    TypedAsset,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -7,7 +8,6 @@ use std::{
     num::{NonZeroU32, NonZeroU64},
     sync::Arc,
 };
-use uuid::Uuid;
 use wgpu::{
     BufferAddress, SamplerBindingType, TextureSampleType, TextureViewDimension, VertexAttribute,
     VertexStepMode,
@@ -101,18 +101,18 @@ pub struct ShaderSource {
 impl AssetSource for ShaderSource {
     type Asset = dyn ShaderAsset;
 
-    fn dependencies(&self) -> Vec<Uuid> {
+    fn dependencies(&self) -> Vec<AssetKey> {
         vec![]
     }
 
     fn load(
         self,
-        id: Uuid,
+        key: AssetKey,
         _deps_provider: &dyn AssetDepsProvider,
         gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError> {
         Ok(Arc::new(Shader {
-            id,
+            key,
             handle: gfx_bridge
                 .compile_shader(wgpu::ShaderSource::Wgsl(Cow::Borrowed(&self.source))),
             reflection: self.reflection,
@@ -121,14 +121,14 @@ impl AssetSource for ShaderSource {
 }
 
 struct Shader {
-    id: Uuid,
+    key: AssetKey,
     handle: GfxShaderModule,
     reflection: ShaderReflection,
 }
 
 impl Asset for Shader {
-    fn id(&self) -> Uuid {
-        self.id
+    fn key(&self) -> &AssetKey {
+        &self.key
     }
 
     fn as_typed(self: Arc<Self>) -> TypedAsset {

@@ -1,4 +1,4 @@
-use crate::{Metadata, PipelineGfxBridge};
+use crate::PipelineGfxBridge;
 use asset::AssetSource;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -8,13 +8,13 @@ pub trait AssetPipeline: Serialize + AssetSource
 where
     Self: Sized,
 {
-    type Metadata: for<'de> Deserialize<'de>;
+    type Metadata: for<'de> Deserialize<'de> + Default;
 
     /// Process the file content and metadata into a new asset source.
     fn process(
         file_path: &Path,
         file_content: Vec<u8>,
-        metadata: &Metadata<Self::Metadata>,
+        metadata: &Self::Metadata,
         gfx_bridge: &dyn PipelineGfxBridge,
     ) -> anyhow::Result<Self>;
 }

@@ -30,7 +30,7 @@ pub enum ShaderReflectionError {
     NoFragmentEntryPoint,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct ShaderMetadata;
 
 impl AssetPipeline for ShaderSource {
@@ -39,7 +39,7 @@ impl AssetPipeline for ShaderSource {
     fn process(
         _file_path: &Path,
         file_content: Vec<u8>,
-        _metadata: &crate::Metadata<Self::Metadata>,
+        _metadata: &Self::Metadata,
         gfx_bridge: &dyn PipelineGfxBridge,
     ) -> anyhow::Result<Self> {
         let source = std::str::from_utf8(&file_content)
