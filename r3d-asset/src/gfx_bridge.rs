@@ -16,12 +16,12 @@ pub trait GfxBridge {
     /// Compiles a shader and returns a handle to it.
     fn compile_shader(&self, source: ShaderSource) -> GfxShaderModule;
     /// Uploads a texture to the GPU and returns a handle to it.
+    // TODO: add support for mipmaps
     fn upload_texture(
         &self,
         width: u16,
         height: u16,
         format: TextureFormat,
-        generate_mipmaps: bool,
         texels: &[u8],
     ) -> GfxTexture;
     /// Creates a texture view from a texture.

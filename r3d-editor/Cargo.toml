@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 r3d = { path = ".." }
 
+lazy_static = { version = "1" }
 pollster = { version = "0.3" }
 thiserror = { version = "1" }

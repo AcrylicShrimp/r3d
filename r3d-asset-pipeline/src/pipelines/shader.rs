@@ -111,11 +111,32 @@ impl AssetPipeline for ShaderSource {
 }
 
 fn reflect_globals(gfx_bridge: &dyn PipelineGfxBridge, module: &Module) -> Vec<ShaderGlobalItem> {
-    module
-        .global_variables
-        .iter()
-        .filter_map(|(_, item)| reflect_global_item(gfx_bridge, module, item))
-        .collect()
+    let mut global_items = Vec::from_iter(
+        module
+            .global_variables
+            .iter()
+            .filter_map(|(_, item)| reflect_global_item(gfx_bridge, module, item)),
+    );
+
+    // Restrict semantic bindings to isolated binding groups.
+    let isolated_binding_groups =
+        Vec::from_iter(global_items.iter().enumerate().map(|(index, binding)| {
+            binding.binding == 0
+                && !global_items
+                    .iter()
+                    .enumerate()
+                    .any(|(other_index, other_binding)| {
+                        index != other_index && binding.group == other_binding.group
+                    })
+        }));
+
+    for (index, binding) in global_items.iter_mut().enumerate() {
+        if !isolated_binding_groups[index] {
+            binding.sematic_key = None;
+        }
+    }
+
+    global_items
 }
 
 fn reflect_global_item(
@@ -135,7 +156,7 @@ fn reflect_global_item(
     };
 
     Some(ShaderGlobalItem {
-        sematic_key: gfx_bridge.get_semantic_binding_key(module, name),
+        sematic_key: gfx_bridge.get_semantic_binding_key(name, &kind),
         name: name.clone(),
         group,
         binding,
@@ -208,7 +229,7 @@ fn reflect_shader_input_field(
     };
     let format = shader_ty_to_vertex_format(&module.types[member.ty])?;
     Some(ShaderInputField {
-        semantic_key: gfx_bridge.get_semantic_input_key(step_mode, format, name),
+        semantic_key: gfx_bridge.get_semantic_input_key(name, step_mode, format),
         name: name.clone(),
         attribute: VertexAttribute {
             format,
@@ -256,7 +277,7 @@ fn reflect_shader_output_item(
         Binding::Location { location, .. } => *location,
     };
     Some(ShaderOutputItem {
-        semantic_key: gfx_bridge.get_semantic_output_key(location, name),
+        semantic_key: gfx_bridge.get_semantic_output_key(name, location),
         name: name.clone(),
         location,
     })

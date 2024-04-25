@@ -13,15 +13,18 @@ categories = ["game-development", "game-engines"]
 [dependencies]
 asset = { path = "./r3d-asset" }
 asset-loader = { path = "./r3d-asset-loader" }
+asset-pipeline = { path = "./r3d-asset-pipeline" }
 codegen = { path = "./r3d-codegen" }
 logging = { path = "./r3d-logging" }
 
 bitvec = { version = "1" }
 colored = { version = "2" }
+downcast-rs = { version = "1" }
 fontdue = { version = "0.7" }
 image = { version = "0.24" }
 itertools = { version = "0.11" }
 naga = { version = "0.13", features = ["wgsl-in"] }
+nohash-hasher = { version = "0.2" }
 parking_lot = { version = "0.12", features = ["hardware-lock-elision"] }
 russimp = { version = "2", features = ["prebuilt", "static-link"] }
 serde = { version = "1", features = ["derive"] }

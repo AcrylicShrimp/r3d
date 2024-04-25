@@ -1,5 +1,6 @@
-use asset::assets::{SemanticShaderBindingKey, SemanticShaderInputKey, SemanticShaderOutputKey};
-use naga::Module;
+use asset::assets::{
+    SemanticShaderBindingKey, SemanticShaderInputKey, SemanticShaderOutputKey, ShaderGlobalItemKind,
+};
 use wgpu::{VertexFormat, VertexStepMode};
 
 /// A bridge interface to interact with the GPU.
@@ -9,17 +10,17 @@ pub trait PipelineGfxBridge {
     /// Gets the semantic binding key of a global item.
     fn get_semantic_binding_key(
         &self,
-        module: &Module,
         name: &str,
+        kind: &ShaderGlobalItemKind,
     ) -> Option<SemanticShaderBindingKey>;
     /// Gets the semantic input key of a input field.
     fn get_semantic_input_key(
         &self,
+        name: &str,
         step_mode: VertexStepMode,
         format: VertexFormat,
-        name: &str,
     ) -> Option<SemanticShaderInputKey>;
     /// Gets the semantic output key of a output item.
-    fn get_semantic_output_key(&self, location: u32, name: &str)
+    fn get_semantic_output_key(&self, name: &str, location: u32)
         -> Option<SemanticShaderOutputKey>;
 }

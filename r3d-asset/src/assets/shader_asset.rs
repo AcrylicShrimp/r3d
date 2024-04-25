@@ -16,11 +16,29 @@ use wgpu::{
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SemanticShaderBindingKey(NonZeroU32);
 
+impl SemanticShaderBindingKey {
+    pub const fn new(key: NonZeroU32) -> Self {
+        Self(key)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SemanticShaderInputKey(NonZeroU32);
 
+impl SemanticShaderInputKey {
+    pub const fn new(key: NonZeroU32) -> Self {
+        Self(key)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SemanticShaderOutputKey(NonZeroU32);
+
+impl SemanticShaderOutputKey {
+    pub const fn new(key: NonZeroU32) -> Self {
+        Self(key)
+    }
+}
 
 /// A fully reflected shader.
 #[derive(Serialize, Deserialize, Debug, Clone)]

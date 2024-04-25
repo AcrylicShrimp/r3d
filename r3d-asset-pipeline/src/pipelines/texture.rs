@@ -19,7 +19,6 @@ impl Default for TextureMetadata {
         Self {
             texture: TextureTable {
                 is_srgb: false,
-                has_alpha: true,
                 filter_mode: TextureTableFilterMode::Trilinear,
                 address_mode_u: TextureTableAddressMode::Clamp,
                 address_mode_v: TextureTableAddressMode::Clamp,
@@ -67,7 +66,6 @@ impl From<TextureTableAddressMode> for TextureAddressMode {
 #[derive(Serialize, Deserialize)]
 pub struct TextureTable {
     pub is_srgb: bool,
-    pub has_alpha: bool,
     pub filter_mode: TextureTableFilterMode,
     pub address_mode_u: TextureTableAddressMode,
     pub address_mode_v: TextureTableAddressMode,
@@ -113,7 +111,7 @@ impl AssetPipeline for TextureSource {
             .decode()?;
         let width = image.width() as u16;
         let height = image.height() as u16;
-        let texels = if metadata.texture.has_alpha {
+        let texels = {
             let mut image = {
                 let rgba = image.to_rgba8();
                 drop(image);
@@ -130,29 +128,8 @@ impl AssetPipeline for TextureSource {
             }
 
             image.into_raw()
-        } else {
-            let mut image = {
-                let rgb = image.to_rgb8();
-                drop(image);
-                rgb
-            };
-
-            if metadata.texture.is_srgb {
-                for pixel in image.pixels_mut() {
-                    let (r, g, b) = srgb_to_linear(pixel[0], pixel[1], pixel[2]);
-                    pixel[0] = r;
-                    pixel[1] = g;
-                    pixel[2] = b;
-                }
-            }
-
-            image.into_raw()
         };
-        let format = if metadata.texture.has_alpha {
-            TextureFormat::RGBA8
-        } else {
-            TextureFormat::RGB8
-        };
+        let format = TextureFormat::RGBA8;
         let filter_mode = metadata.texture.filter_mode.into();
         let address_mode = (
             metadata.texture.address_mode_u.into(),

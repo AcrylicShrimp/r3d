@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextureFormat {
-    RGB8,
     RGBA8,
 }
 
@@ -123,13 +122,7 @@ impl AssetSource for TextureSource {
         _deps_provider: &dyn AssetDepsProvider,
         gfx_bridge: &dyn GfxBridge,
     ) -> Result<Arc<Self::Asset>, AssetLoadError> {
-        let handle = gfx_bridge.upload_texture(
-            self.width,
-            self.height,
-            self.format,
-            self.filter_mode.needs_mipmap(),
-            &self.texels,
-        );
+        let handle = gfx_bridge.upload_texture(self.width, self.height, self.format, &self.texels);
         let view_handle = gfx_bridge.create_texture_view(&handle);
         let sampler_handle = gfx_bridge.create_sampler(self.filter_mode, self.address_mode);
 

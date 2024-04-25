@@ -9,10 +9,7 @@ pub struct ObjectIdAllocator {
 
 impl ObjectIdAllocator {
     pub fn new() -> Self {
-        Self {
-            next_id: NonZeroU32::new(1).unwrap(),
-            freed_ids: Vec::with_capacity(1024),
-        }
+        Default::default()
     }
 
     pub fn alloc(&mut self) -> ObjectId {
@@ -31,5 +28,14 @@ impl ObjectIdAllocator {
 
     pub fn dealloc(&mut self, id: ObjectId) {
         self.freed_ids.push(id);
+    }
+}
+
+impl Default for ObjectIdAllocator {
+    fn default() -> Self {
+        Self {
+            next_id: NonZeroU32::new(1).unwrap(),
+            freed_ids: Vec::with_capacity(1024),
+        }
     }
 }

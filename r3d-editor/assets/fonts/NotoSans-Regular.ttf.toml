@@ -1,0 +1,8 @@
+[asset]
+name = "NotoSans-Regular"
+
+[font]
+sdf_font_size = 128.0
+sdf_inset = 10
+sdf_radius = 10
+sdf_cutoff = 0.5
