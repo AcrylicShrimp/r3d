@@ -196,6 +196,10 @@ impl SemanticShaderBindingKey {
     pub const fn new(key: u32) -> Self {
         Self(unsafe { NonZeroU32::new_unchecked(key) })
     }
+
+    pub const fn get(self) -> NonZeroU32 {
+        self.0
+    }
 }
 
 #[derive(Debug, Clone, Hash)]
@@ -213,6 +217,10 @@ impl SemanticShaderInputKey {
     pub const fn new(key: u32) -> Self {
         Self(unsafe { NonZeroU32::new_unchecked(key) })
     }
+
+    pub const fn get(self) -> NonZeroU32 {
+        self.0
+    }
 }
 
 #[derive(Debug, Clone, Hash)]
@@ -229,6 +237,10 @@ pub struct SemanticShaderOutputKey(NonZeroU32);
 impl SemanticShaderOutputKey {
     pub const fn new(key: u32) -> Self {
         Self(unsafe { NonZeroU32::new_unchecked(key) })
+    }
+
+    pub const fn get(self) -> NonZeroU32 {
+        self.0
     }
 }
 

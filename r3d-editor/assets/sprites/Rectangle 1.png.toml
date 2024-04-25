@@ -1,0 +1,61 @@
+[asset]
+name = "Rectangle 1"
+
+[texture]
+is_srgb = false
+has_alpha = false
+filter_mode = "point"
+filter_mode = "bilinear"
+filter_mode = "trilinear"
+address_mode_u = "clamp"
+address_mode_u = "repeat"
+address_mode_v = "clamp"
+address_mode_v = "repeat"
+
+[sprite.sprite-name-0]
+xmin = 0
+xmax = 100
+ymin = 50
+ymax = 150
+# Filter mode will be inherited from texture.
+# Address mode will be inherited from texture.
+
+[sprite.sprite-name-1]
+x_min = 0
+x_max = 100
+y_min = 50
+y_max = 150
+filter_mode = "point"
+filter_mode = "bilinear"
+filter_mode = "trilinear"
+address_mode_u = "clamp"
+address_mode_u = "repeat"
+address_mode_v = "clamp"
+address_mode_v = "repeat"
+
+[ninepatch.ninepatch-name-0]
+x_min = 0
+x_mid_min = 50
+x_mid_max = 100
+x_max = 150
+y_min = 0
+y_mid_min = 50
+y_mid_max = 100
+y_max = 150
+
+[ninepatch.ninepatch-name-1]
+x_min = 0
+x_mid_min = 50
+x_mid_max = 100
+x_max = 150
+y_min = 0
+y_mid_min = 50
+y_mid_max = 100
+y_max = 150
+filter_mode = "point"
+filter_mode = "bilinear"
+filter_mode = "trilinear"
+address_mode_u = "clamp"
+address_mode_u = "repeat"
+address_mode_v = "clamp"
+address_mode_v = "repeat"

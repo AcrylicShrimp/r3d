@@ -38,6 +38,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+pub mod asset;
 pub mod ecs_system;
 pub mod event;
 pub mod gfx;
@@ -48,6 +49,7 @@ pub mod object_event;
 pub mod time;
 pub mod transform;
 pub mod ui;
+pub mod util;
 pub mod vsync;
 
 // re-exports.
@@ -63,6 +65,11 @@ pub fn use_context() -> &'static ContextHandle {
     unsafe { CONTEXT.assume_init_ref() }
 }
 
+// TODO: If we borrow any of the context's fields more than once, it will panic.
+// I think it is a big problem because it's very hard to ensure that any of function will not borrow
+// the context's fields more than once in their call stack.
+// Wrapping fields with RefCell is not a good solution I think; it groups too much fields into one lock.
+// How about to make managers smaller?
 #[derive(Handle)]
 pub struct Context {
     window: Window,
